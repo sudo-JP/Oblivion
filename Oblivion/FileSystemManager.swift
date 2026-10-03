@@ -11,6 +11,7 @@ enum FileOperationError: Error {
     case failCreateDirectory(String)
     case failDeleteFile(String)
     case invalidPath(URL)
+    case fileAlreadyExists(URL)
 }
 
 enum DirectoryItem {
@@ -28,6 +29,9 @@ extension FileManager {
 
 class FileSystemManager {
     private let fileManager = FileManager.default
+    var documentsDirectory: URL? {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
     
     // For deleting files
     public func deleteFile(path: URL) -> Result<Void, FileOperationError> {
