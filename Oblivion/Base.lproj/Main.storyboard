@@ -173,6 +173,34 @@
                                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="imp-content-stack" userLabel="Import Content Stack">
                                         <rect key="frame" x="20" y="20" width="353" height="554"/>
                                         <subviews>
+                                            <stackView hidden="YES" opaque="NO" contentMode="scaleToFill" alignment="center" spacing="12" layoutMarginsRelativeArrangement="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-error-message-view" userLabel="Error Message Box">
+                                                <rect key="frame" x="0.0" y="0.0" width="353" height="68"/>
+                                                <subviews>
+                                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="249" verticalHuggingPriority="251" text="An error occurred." numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-error-message-label" userLabel="Error Message Text">
+                                                        <rect key="frame" x="12" y="24" width="253" height="20"/>
+                                                        <fontDescription key="fontDescription" style="UICTFontTextStyleSubheadline"/>
+                                                        <color key="textColor" systemColor="systemRedColor"/>
+                                                    </label>
+                                                    <button opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="252" horizontalCompressionResistancePriority="751" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" translatesAutoresizingMaskIntoConstraints="NO" id="imp-error-close-button" userLabel="Close Error Message">
+                                                        <rect key="frame" x="277" y="12" width="64" height="44"/>
+                                                        <constraints>
+                                                            <constraint firstAttribute="height" relation="greaterThanOrEqual" priority="999" constant="44" id="imp-error-close-height"/>
+                                                            <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="44" id="imp-error-close-width"/>
+                                                        </constraints>
+                                                        <state key="normal" title="Close"/>
+                                                        <connections>
+                                                            <action selector="closeErrorMessage:" destination="imp-view-controller" eventType="touchUpInside" id="imp-error-close-action"/>
+                                                        </connections>
+                                                    </button>
+                                                </subviews>
+                                                <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
+                                                <edgeInsets key="layoutMargins" top="12" left="12" bottom="12" right="12"/>
+                                                <userDefinedRuntimeAttributes>
+                                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
+                                                        <real key="value" value="11"/>
+                                                    </userDefinedRuntimeAttribute>
+                                                </userDefinedRuntimeAttributes>
+                                            </stackView>
                                             <view tag="101" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-summary" userLabel="PDF Summary">
                                                 <rect key="frame" x="0.0" y="0.0" width="353" height="86"/>
                                                 <subviews>
@@ -380,6 +408,8 @@ The original PDF stays in its source location.</string>
                     <connections>
                         <outlet property="destinationPathLabel" destination="imp-destination-path" id="imp-destination-path-outlet"/>
                         <outlet property="directoryTableView" destination="imp-folder-table" id="imp-directory-table-outlet"/>
+                        <outlet property="errorMessageView" destination="imp-error-message-view" id="imp-error-view-outlet"/>
+                        <outlet property="errorMessageLabel" destination="imp-error-message-label" id="imp-error-label-outlet"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="imp-view-responder" sceneMemberID="firstResponder"/>
@@ -406,6 +436,9 @@ The original PDF stays in its source location.</string>
         </systemColor>
         <systemColor name="systemGroupedBackgroundColor">
             <color red="0.94901960780000005" green="0.94901960780000005" blue="0.96862745100000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </systemColor>
+        <systemColor name="systemRedColor">
+            <color red="1" green="0.231372549" blue="0.1882352941" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>
         <systemColor name="tertiarySystemFillColor">
             <color red="0.46274509800000002" green="0.46274509800000002" blue="0.50196078430000002" alpha="0.12" colorSpace="custom" customColorSpace="sRGB"/>

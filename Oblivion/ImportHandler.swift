@@ -15,6 +15,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     
     @IBOutlet weak var destinationPathLabel: UILabel!
     @IBOutlet weak var directoryTableView: UITableView!
+    @IBOutlet weak var errorMessageView: UIStackView!
+    @IBOutlet weak var errorMessageLabel: UILabel!
+
+    @IBAction func closeErrorMessage(_ sender: UIButton) {
+        errorMessageView.isHidden = true
+    }
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
         dismiss(animated: true)
@@ -25,7 +31,41 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
 
     @IBAction func createDir(_ sender: UIBarButtonItem) {
-        // TODO: Implement folder creation.
+        let alert = UIAlertController(
+            title: "New Directory",
+            message: "Enter a directory name.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { textField in
+            textField.placeholder = "Directory name"
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+            let directoryName = alert.textFields?.first?.text?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            let invalidCharacters = [".", "..", "/"]
+            if directoryName.isEmpty ||
+                invalidCharacters.contains(where: { directoryName.contains($0) }) {
+                self?.displayError(message: "Could not create the directory.")
+                return
+            }
+            guard let parentURL = self?.currentDirectoryURL else {
+                self?.displayError(message: "Could not get parent directory path")
+                return
+            }
+            let newDirectoryURL = parentURL.appendingPathComponent(
+                directoryName,
+                isDirectory: true
+            )
+
+            guard case .success() = self?.fileSystemManager.createDir(at: newDirectoryURL) else {
+                self?.displayError(message: "Could not create the directory.")
+                return
+            }
+        })
+        present(alert, animated: true)
+
     }
 
     @IBAction func goBack(_ sender: UIButton) {
@@ -36,13 +76,19 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             return
         }
         
-        let listDirectoryResult = fileSystemManager.listDirectory(at: parentURL)
-        guard case let .success(items) = listDirectoryResult else {
+        if !setCurrentDirectory(at: parentURL) {
             return
         }
-        currentDirectoryURL = parentURL
-        currentDirectoryContent = items
-        directoryTableView.reloadData()
+    }
+    
+    override func viewDidLoad() {
+        guard let currentURL = fileSystemManager.documentsDirectory else {
+            return
+        }
+        currentDirectoryURL = currentURL
+        if !setCurrentDirectory(at: currentURL) {
+            return
+        }
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -70,15 +116,9 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         let fileContent = currentDirectoryContent[indexPath.row]
         switch fileContent {
         case let .directory(url):
-            let listDirectoryResult = fileSystemManager.listDirectory(at: url)
-            guard case let .success(items) = listDirectoryResult else {
+            if !setCurrentDirectory(at: url) {
                 return
             }
-
-            currentDirectoryURL = url
-            currentDirectoryContent = items
-            directoryStack.append(url)
-            tableView.reloadData()
         case let .file(url):
             // TODO PDFViewer
         }
@@ -102,6 +142,25 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         case .success: return true
         case .failure: return false
         }
+    }
+    
+    func setCurrentDirectory(at url: URL) -> Bool {
+        let listDirectoryResult = fileSystemManager.listDirectory(at: url)
+        guard case let .success(items) = listDirectoryResult else {
+            return false
+        }
+
+        currentDirectoryURL = url
+        currentDirectoryContent = items
+        directoryStack.append(url)
+        directoryTableView.reloadData()
+        return true
+    }
+    
+    func displayError(message: String) {
+        errorMessageLabel.text = message
+        errorMessageView.isHidden = false
+
     }
 
 }
