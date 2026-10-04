@@ -71,7 +71,7 @@ class FileSystemManager {
         }
     }
     
-    public func createDirectory(at path: URL) -> Result<Void, FileOperationError> {
+    public func createDir(at path: URL) -> Result<Void, FileOperationError> {
         do {
             try fileManager.createDirectory(
                 at: path,

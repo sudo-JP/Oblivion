@@ -257,6 +257,19 @@
                                                     </label>
                                                 </subviews>
                                             </stackView>
+                                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="leading" contentVerticalAlignment="center" buttonType="system" translatesAutoresizingMaskIntoConstraints="NO" id="imp-back-button" userLabel="Back to Parent Destination">
+                                                <rect key="frame" x="0.0" y="306" width="353" height="44"/>
+                                                <constraints>
+                                                    <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="44" id="imp-back-min-height"/>
+                                                </constraints>
+                                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                <state key="normal" title="Back">
+                                                    <color key="titleColor" systemColor="systemBlueColor"/>
+                                                </state>
+                                                <connections>
+                                                    <action selector="goBack:" destination="imp-view-controller" eventType="touchUpInside" id="imp-back-action"/>
+                                                </connections>
+                                            </button>
                                             <tableView clipsSubviews="YES" tag="100" contentMode="scaleToFill" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="57" estimatedRowHeight="57" sectionHeaderHeight="0.0" sectionFooterHeight="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="imp-folder-table" userLabel="Destination Folder Table">
                                                 <rect key="frame" x="0.0" y="306.33333333333331" width="353" height="198"/>
                                                 <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
@@ -299,6 +312,10 @@
                                                         <real key="value" value="11"/>
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
+                                                <connections>
+                                                    <outlet property="dataSource" destination="imp-view-controller" id="imp-directory-data-source"/>
+                                                    <outlet property="delegate" destination="imp-view-controller" id="imp-directory-delegate"/>
+                                                </connections>
                                             </tableView>
                                             <label opaque="NO" userInteractionEnabled="NO" tag="104" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-helper-label" userLabel="Import Help Label">
                                                 <rect key="frame" x="0.0" y="520.33333333333337" width="353" height="33.666666666666629"/>
@@ -335,7 +352,7 @@ The original PDF stays in its source location.</string>
                     <toolbarItems>
                         <barButtonItem title="New Folder" id="imp-new-folder-item" userLabel="New Folder Button">
                             <connections>
-                                <action selector="newFolder:" destination="imp-view-controller" id="imp-new-folder-action"/>
+                                <action selector="createDir:" destination="imp-view-controller" id="imp-new-folder-action"/>
                             </connections>
                         </barButtonItem>
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="imp-toolbar-space"/>
@@ -362,6 +379,7 @@ The original PDF stays in its source location.</string>
                     </navigationItem>
                     <connections>
                         <outlet property="destinationPathLabel" destination="imp-destination-path" id="imp-destination-path-outlet"/>
+                        <outlet property="directoryTableView" destination="imp-folder-table" id="imp-directory-table-outlet"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="imp-view-responder" sceneMemberID="firstResponder"/>
