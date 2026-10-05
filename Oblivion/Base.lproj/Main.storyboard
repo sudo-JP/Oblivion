@@ -406,7 +406,7 @@ The original PDF stays in its source location.</string>
                         </barButtonItem>
                     </navigationItem>
                     <connections>
-                        <outlet property="destinationPathLabel" destination="imp-destination-path" id="imp-destination-path-outlet"/>
+                        <outlet property="fileNameLabel" destination="imp-file-name" id="imp-file-name-outlet"/>
                         <outlet property="directoryTableView" destination="imp-folder-table" id="imp-directory-table-outlet"/>
                         <outlet property="errorMessageView" destination="imp-error-message-view" id="imp-error-view-outlet"/>
                         <outlet property="errorMessageLabel" destination="imp-error-message-label" id="imp-error-label-outlet"/>

@@ -10,6 +10,7 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    private var pendingImportURL: URL?
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -17,6 +18,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
         guard let _ = (scene as? UIWindowScene) else { return }
+        pendingImportURL = connectionOptions.urlContexts.first?.url
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -29,6 +31,38 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidBecomeActive(_ scene: UIScene) {
         // Called when the scene has moved from an inactive state to an active state.
         // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
+        presentPendingImport()
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let url = URLContexts.first?.url else {
+            print("No file URL was supplied to the scene.")
+            return
+        }
+        guard pendingImportURL == nil else {
+            print("Cannot accept another file while an import is waiting to be presented.")
+            return
+        }
+        pendingImportURL = url
+        presentPendingImport()
+    }
+
+    func presentPendingImport() {
+        guard let url = pendingImportURL else { return }
+        guard window?.windowScene?.activationState == .foregroundActive else { return }
+        guard url.isFileURL, url.pathExtension.lowercased() == "pdf" else {
+            print("Cannot import this file: only PDF files are currently supported.")
+            pendingImportURL = nil
+            return
+        }
+        guard let navigation = window?.rootViewController as? UINavigationController,
+              let browser = navigation.viewControllers.first as? ViewController else {
+            print("Cannot present import: the file browser is unavailable.")
+            return
+        }
+        if browser.showImport(for: url) {
+            pendingImportURL = nil
+        }
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
@@ -49,4 +83,3 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 
 }
-

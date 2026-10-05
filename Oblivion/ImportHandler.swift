@@ -8,12 +8,12 @@ import UIKit
 
 class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate {
     private let fileSystemManager = FileSystemManager()
+    var sourceURL: URL?
     var currentDirectoryURL: URL?
-    var documentsDirectory: URL?
     var currentDirectoryContent: [DirectoryItem] = []
     var directoryStack: [URL] = []
     
-    @IBOutlet weak var destinationPathLabel: UILabel!
+    @IBOutlet weak var fileNameLabel: UILabel!
     @IBOutlet weak var directoryTableView: UITableView!
     @IBOutlet weak var errorMessageView: UIStackView!
     @IBOutlet weak var errorMessageLabel: UILabel!
@@ -27,7 +27,14 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
     
     @IBAction func confirmImport(_ sender: UIBarButtonItem) {
-        // TODO: Read destinationPathLabel.text and implement the import.
+        guard let sourceURL else {
+            displayError(message: "No file selected.")
+            return
+        }
+
+        if handle(url: sourceURL) {
+            dismiss(animated: true)
+        }
     }
 
     @IBAction func createDir(_ sender: UIBarButtonItem) {
@@ -40,18 +47,19 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             textField.placeholder = "Directory name"
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
+            guard let self, let alert else { return }
             let directoryName = alert.textFields?.first?.text?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
-            let invalidCharacters = [".", "..", "/"]
             if directoryName.isEmpty ||
-                invalidCharacters.contains(where: { directoryName.contains($0) }) {
-                self?.displayError(message: "Could not create the directory.")
+                directoryName == "." || directoryName == ".." ||
+                directoryName.contains("/") || directoryName.contains("\0") {
+                self.displayError(message: "Enter a valid directory name without slashes.")
                 return
             }
-            guard let parentURL = self?.currentDirectoryURL else {
-                self?.displayError(message: "Could not get parent directory path")
+            guard let parentURL = self.currentDirectoryURL else {
+                self.displayError(message: "Could not get the current directory.")
                 return
             }
             let newDirectoryURL = parentURL.appendingPathComponent(
@@ -59,36 +67,35 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
                 isDirectory: true
             )
 
-            guard case .success() = self?.fileSystemManager.createDir(at: newDirectoryURL) else {
-                self?.displayError(message: "Could not create the directory.")
+            guard !FileManager.default.fileExists(atPath: newDirectoryURL.path) else {
+                self.displayError(message: "An item with that name already exists.")
                 return
+            }
+            switch self.fileSystemManager.createDir(at: newDirectoryURL) {
+            case .success:
+                _ = self.refreshDirectory(at: parentURL)
+            case let .failure(error):
+                self.displayError(message: "Could not create the directory: \(error)")
             }
         })
         present(alert, animated: true)
-
     }
 
     @IBAction func goBack(_ sender: UIButton) {
-        if directoryStack.isEmpty {
-            return
-        }
-        guard let parentURL = directoryStack.popLast() else {
-            return
-        }
-        
-        if !setCurrentDirectory(at: parentURL) {
-            return
+        guard let parentURL = directoryStack.last else { return }
+        if setCurrentDirectory(at: parentURL) {
+            directoryStack.removeLast()
         }
     }
     
     override func viewDidLoad() {
+        super.viewDidLoad()
+        fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
         guard let currentURL = fileSystemManager.documentsDirectory else {
+            displayError(message: "The Documents directory is unavailable.")
             return
         }
-        currentDirectoryURL = currentURL
-        if !setCurrentDirectory(at: currentURL) {
-            return
-        }
+        _ = setCurrentDirectory(at: currentURL)
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -113,47 +120,71 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
         let fileContent = currentDirectoryContent[indexPath.row]
         switch fileContent {
         case let .directory(url):
-            if !setCurrentDirectory(at: url) {
-                return
+            let previousURL = currentDirectoryURL
+            if setCurrentDirectory(at: url), let previousURL {
+                directoryStack.append(previousURL)
             }
-        case let .file(url):
-            // TODO PDFViewer
+        case .file:
+            break
         }
     }
         
     public func handle(url: URL) -> Bool {
-        guard url.pathExtension.lowercased() == "pdf" else { return false }
-            
-        guard url.startAccessingSecurityScopedResource() else {
-            print("Failed to get security-scoped access to the file.")
+        guard url.isFileURL, url.pathExtension.lowercased() == "pdf" else {
+            displayError(message: "Only PDF files are currently supported.")
             return false
         }
             
+        let hasScopedAccess = url.startAccessingSecurityScopedResource()
+
         defer {
-            url.stopAccessingSecurityScopedResource()
+            if hasScopedAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
         let destination = currentDirectoryURL ?? fileSystemManager.documentsDirectory
-        guard let destination else { return false }
+        guard let destination else {
+            displayError(message: "No destination directory is available.")
+            return false
+        }
 
-        switch fileSystemManager.moveFile(path: url, dst: destination.appendingPathComponent(url.lastPathComponent)) {
+        switch fileSystemManager.copyFile(path: url, dst: destination.appendingPathComponent(url.lastPathComponent)) {
         case .success: return true
-        case .failure: return false
+        case let .failure(.fileAlreadyExists(existingURL)):
+            displayError(message: "An item named \(existingURL.lastPathComponent) already exists in this directory.")
+            return false
+        case let .failure(error):
+            displayError(message: "Could not import the file: \(error)")
+            return false
         }
     }
     
-    func setCurrentDirectory(at url: URL) -> Bool {
+    func refreshDirectory(at url: URL) -> Bool {
         let listDirectoryResult = fileSystemManager.listDirectory(at: url)
-        guard case let .success(items) = listDirectoryResult else {
+        switch listDirectoryResult {
+        case let .success(items):
+            currentDirectoryContent = items.filter {
+                if case .directory = $0 { return true }
+                return false
+            }
+            directoryTableView.reloadData()
+            return true
+        case let .failure(error):
+            displayError(message: "Could not load the directory: \(error)")
+            return false
+        }
+    }
+
+    func setCurrentDirectory(at url: URL) -> Bool {
+        if !refreshDirectory(at: url) {
             return false
         }
 
         currentDirectoryURL = url
-        currentDirectoryContent = items
-        directoryStack.append(url)
-        directoryTableView.reloadData()
         return true
     }
     

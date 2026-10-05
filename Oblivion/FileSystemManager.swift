@@ -8,6 +8,7 @@ import Foundation
 
 enum FileOperationError: Error {
     case failMoveFile(String)
+    case failCopyFile(String)
     case failCreateDirectory(String)
     case failDeleteFile(String)
     case invalidPath(URL)
@@ -68,6 +69,18 @@ class FileSystemManager {
             return .success(())
         } catch {
             return .failure(.failMoveFile("\(error)"))
+        }
+    }
+
+    public func copyFile(path: URL, dst: URL) -> Result<Void, FileOperationError> {
+        guard !fileManager.fileExists(atPath: dst.path) else {
+            return .failure(.fileAlreadyExists(dst))
+        }
+        do {
+            try fileManager.copyItem(at: path, to: dst)
+            return .success(())
+        } catch {
+            return .failure(.failCopyFile(error.localizedDescription))
         }
     }
     
