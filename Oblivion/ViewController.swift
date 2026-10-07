@@ -9,6 +9,9 @@ import UIKit
 import UniformTypeIdentifiers
 
 class ViewController: UIViewController, UIDocumentPickerDelegate {
+    @IBAction func unwindToBrowserFromViewer(_ segue: UIStoryboardSegue) {
+        
+    }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
