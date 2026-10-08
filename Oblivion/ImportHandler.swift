@@ -7,11 +7,12 @@
 import UIKit
 import UniformTypeIdentifiers
 
-class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate, UIAdaptivePresentationControllerDelegate {
     private let fileSystemManager = FileSystemManager()
     var sourceURL: URL?
     var initialDirectoryURL: URL?
-    var onDismiss: (() -> Void)?
+    var operation: FileTransferOperation = .copy
+    var onDismiss: ((Bool) -> Void)?
     var currentDirectoryURL: URL?
     var currentDirectoryContent: [DirectoryItem] = []
     var directoryStack: [URL] = [] {
@@ -27,9 +28,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     @IBOutlet weak var defaultBadgeLabel: UILabel!
     @IBOutlet weak var toolbarDestinationLabel: UILabel!
     @IBOutlet weak var backButton: UIButton!
+    @IBOutlet weak var confirmButton: UIBarButtonItem!
+    @IBOutlet weak var destinationPromptLabel: UILabel!
+    @IBOutlet weak var helperLabel: UILabel!
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
-        dismiss(animated: true, completion: onDismiss)
+        dismiss(animated: true) { self.onDismiss?(false) }
     }
     
     @IBAction func confirmImport(_ sender: UIBarButtonItem) {
@@ -39,7 +43,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
 
         if handle(url: sourceURL) {
-            dismiss(animated: true, completion: onDismiss)
+            dismiss(animated: true) { self.onDismiss?(true) }
         }
     }
 
@@ -79,7 +83,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Import File"
+        title = operation == .copy ? "Import File" : "Move File"
+        confirmButton.title = operation == .copy ? "Import" : "Move"
+        destinationPromptLabel.text = operation == .copy ? "SAVE A COPY TO" : "MOVE TO"
+        helperLabel.text = operation == .copy
+            ? "Choose a directory, or import here.\nThe original file stays in its source location."
+            : "Choose a different directory.\nThe file will be moved, not copied."
         fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
         updateDestinationLabels()
         guard let sourceURL else { return }
@@ -101,12 +110,17 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        navigationController?.presentationController?.delegate = self
         guard currentDirectoryURL == nil else { return }
         guard let currentURL = initialDirectoryURL ?? fileSystemManager.documentsDirectory else {
             displayError(message: "The Documents directory is unavailable.")
             return
         }
         _ = setCurrentDirectory(at: currentURL)
+    }
+
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        onDismiss?(false)
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -166,13 +180,13 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             return false
         }
 
-        switch fileSystemManager.copyFile(path: url, dst: destination.appendingPathComponent(url.lastPathComponent)) {
+        switch fileSystemManager.transferFile(path: url, dst: destination.appendingPathComponent(url.lastPathComponent), operation: operation) {
         case .success: return true
         case let .failure(.fileAlreadyExists(existingURL)):
             displayError(message: "An item named \(existingURL.lastPathComponent) already exists in this directory.")
             return false
         case let .failure(error):
-            displayError(message: "Could not import the file: \(error.localizedDescription)")
+            displayError(message: "Could not \(operation == .copy ? "import" : "move") the file: \(error.localizedDescription)")
             return false
         }
     }
@@ -217,19 +231,23 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     private func updateDestinationLabels() {
         guard isViewLoaded else { return }
         backButton.isEnabled = !directoryStack.isEmpty
+        confirmButton.isEnabled = false
         guard let currentDirectoryURL else { return }
+        confirmButton.isEnabled = operation == .copy ||
+            currentDirectoryURL.resolvingSymlinksInPath().standardizedFileURL != sourceURL?.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
         let root = fileSystemManager.documentsDirectory
         let name = currentDirectoryURL == root ? "Home" : currentDirectoryURL.lastPathComponent
         destinationNameLabel.text = name
         destinationPathLabel.text = (directoryStack + [currentDirectoryURL]).map {
             $0 == root ? "Home" : $0.lastPathComponent
         }.joined(separator: " › ")
-        defaultBadgeLabel.isHidden = currentDirectoryURL != (initialDirectoryURL ?? root)
-        toolbarDestinationLabel.text = "Import into \(name)"
+        defaultBadgeLabel.isHidden = operation == .move || currentDirectoryURL != (initialDirectoryURL ?? root)
+        toolbarDestinationLabel.text = "\(operation == .copy ? "Import" : "Move") into \(name)"
     }
     
     func displayError(message: String) {
-        let alert = UIAlertController(title: "Import Error", message: message, preferredStyle: .alert)
+        print(message)
+        let alert = UIAlertController(title: operation == .copy ? "Import Error" : "Move Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         if let presentedViewController {
             presentedViewController.dismiss(animated: true) { [weak self] in

@@ -317,6 +317,7 @@
                                     </label>
                                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="DtY-q3-Rae">
                                         <rect key="frame" x="337" y="6" width="44" height="44"/>
+                                        <accessibility key="accessibilityConfiguration" label="More document actions"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="44" id="9al-ZM-sa9"/>
                                             <constraint firstAttribute="width" constant="44" id="QHx-JC-nv7"/>
@@ -617,6 +618,9 @@ The original file stays in its source location.</string>
                         <outlet property="defaultBadgeLabel" destination="imp-default-badge" id="imp-default-badge-outlet"/>
                         <outlet property="toolbarDestinationLabel" destination="imp-toolbar-destination" id="imp-toolbar-destination-outlet"/>
                         <outlet property="backButton" destination="imp-back-button" id="imp-back-button-outlet"/>
+                        <outlet property="confirmButton" destination="imp-import-item" id="imp-confirm-button-outlet"/>
+                        <outlet property="destinationPromptLabel" destination="imp-location-caption" id="imp-prompt-outlet"/>
+                        <outlet property="helperLabel" destination="imp-helper-label" id="imp-helper-outlet"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="imp-view-responder" sceneMemberID="firstResponder"/>

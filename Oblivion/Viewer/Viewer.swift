@@ -56,6 +56,8 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     ]
 
     var document: Document?
+    var onMove: (() -> Void)?
+    var onDelete: (() -> Void)?
     private var currentPage = 0
     private var lastPageSize = CGSize.zero
     private var controlsVisible = true
@@ -68,8 +70,24 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     
     @IBOutlet weak var fileNameLabel: UILabel!
     
-    @IBAction func showDocumentActions(_ sender: Any) {
-        restartAutoHideTimer()
+    @IBAction func showDocumentActions(_ sender: UIButton) {
+        guard let onMove, let onDelete else {
+            preconditionFailure("FileBrowser must supply the reader's Move and Delete actions.")
+        }
+        autoHideTimer?.invalidate()
+        let alert = UIAlertController(title: document?.url.lastPathComponent, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Move", style: .default) { [weak alert] _ in
+            alert?.dismiss(animated: true, completion: onMove)
+        })
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak alert] _ in
+            alert?.dismiss(animated: true, completion: onDelete)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
+            alert?.dismiss(animated: true) { self?.restartAutoHideTimer() }
+        })
+        alert.popoverPresentationController?.sourceView = sender
+        alert.popoverPresentationController?.sourceRect = sender.bounds
+        present(alert, animated: true)
     }
 
     static func loadDocument(at url: URL) -> Result<Document, ViewerError> {
@@ -335,9 +353,10 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         restartAutoHideTimer()
     }
 
-    private func restartAutoHideTimer() {
+    func restartAutoHideTimer() {
         autoHideTimer?.invalidate()
         guard controlsVisible, previousIdleTimerSetting != nil,
+              presentedViewController == nil,
               !UIAccessibility.isVoiceOverRunning,
               UIApplication.shared.applicationState == .active else { return }
         autoHideTimer = Timer.scheduledTimer(

@@ -6,8 +6,7 @@
 //
 import UIKit
 
-class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout,
-                   UIAdaptivePresentationControllerDelegate {
+class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     @IBOutlet weak var fileCollectionView: UICollectionView!
     @IBOutlet weak var breadcrumbCollectionView: UICollectionView!
     @IBOutlet weak var backButton: UIBarButtonItem!
@@ -31,6 +30,15 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
 
     @IBAction func deleteSelectedItems(_ sender: UIBarButtonItem) {
         let urls = currentDirectoryContent.map(\.url).filter { selectedURLs.contains($0) }
+        confirmDeletion(of: urls, from: self) { [weak self] succeeded in
+            if succeeded {
+                self?.setSelectionMode(false)
+                self?.presentPendingImport()
+            }
+        }
+    }
+
+    private func confirmDeletion(of urls: [URL], from presenter: UIViewController, completion: @escaping (Bool) -> Void) {
         guard !urls.isEmpty else { return }
         let targets: [(url: URL, identifier: NSObject)]
         do {
@@ -42,7 +50,8 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
                 return (url, identifier)
             }
         } catch {
-            displayError(message: "Could not verify the selected items: \(error.localizedDescription)")
+            displayError(message: "Could not verify the selected items: \(error.localizedDescription)", in: presenter)
+            completion(false)
             return
         }
         let names = urls.map(\.lastPathComponent).joined(separator: "\n")
@@ -52,14 +61,17 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
-            alert?.dismiss(animated: true) { self?.presentPendingImport() }
+            alert?.dismiss(animated: true) {
+                completion(false)
+                self?.presentPendingImport()
+            }
         })
         alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self, weak alert] _ in
             alert?.dismiss(animated: true) {
-                self?.deleteItems(targets)
+                self?.deleteItems(targets, from: presenter, completion: completion)
             }
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 
     @IBAction func unwindToBrowserFromViewer(_ segue: UIStoryboardSegue) {
@@ -290,9 +302,10 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         present(alert, animated: true)
     }
 
-    private func deleteItems(_ targets: [(url: URL, identifier: NSObject)]) {
+    private func deleteItems(_ targets: [(url: URL, identifier: NSObject)], from presenter: UIViewController, completion: @escaping (Bool) -> Void) {
         guard let currentDirectoryURL else {
-            displayError(message: "No current directory is available.")
+            displayError(message: "No current directory is available.", in: presenter)
+            completion(false)
             return
         }
         var failures: [String] = []
@@ -305,12 +318,14 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
                 failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        if !refreshDirectory(at: currentDirectoryURL) { reloadFiles() }
+        if presenter === self || !failures.isEmpty {
+            if !refreshDirectory(at: currentDirectoryURL, errorPresenter: presenter) { reloadFiles() }
+        }
         if failures.isEmpty {
-            setSelectionMode(false)
-            presentPendingImport()
+            completion(true)
         } else {
-            displayError(message: failures.joined(separator: "\n"))
+            displayError(message: failures.joined(separator: "\n"), in: presenter)
+            completion(false)
         }
     }
 
@@ -325,10 +340,9 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             handler.sourceURL = sourceURL
             handler.initialDirectoryURL = currentDirectoryURL
             handler.directoryStack = directoryStack
-            handler.onDismiss = { [weak self] in
+            handler.onDismiss = { [weak self] _ in
                 self?.importDidDismiss()
             }
-            navigation.presentationController?.delegate = self
             return
         }
         guard segue.identifier == "ShowViewer" else { return }
@@ -337,7 +351,49 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             preconditionFailure("ShowViewer must receive a document and present Viewer.")
         }
         viewer.document = document
+        viewer.onMove = { [weak self, weak viewer] in
+            guard let self, let viewer else { return }
+            self.presentMove(for: document.url, from: viewer)
+        }
+        viewer.onDelete = { [weak self, weak viewer] in
+            guard let self, let viewer else { return }
+            self.confirmDeletion(of: [document.url], from: viewer) { [weak self, weak viewer] succeeded in
+                guard let viewer else { return }
+                if succeeded {
+                    self?.closeViewer(viewer)
+                } else {
+                    viewer.restartAutoHideTimer()
+                }
+            }
+        }
         self.viewer = viewer
+    }
+
+    private func presentMove(for url: URL, from viewer: Viewer) {
+        guard let navigation = storyboard?.instantiateViewController(withIdentifier: "ImportHandlerNavigationController") as? UINavigationController,
+              let handler = navigation.viewControllers.first as? ImportHandler else {
+            preconditionFailure("Move must use the existing import destination scene.")
+        }
+        handler.operation = .move
+        handler.sourceURL = url
+        handler.initialDirectoryURL = url.deletingLastPathComponent()
+        handler.directoryStack = directoryStack
+        handler.onDismiss = { [weak self, weak viewer] succeeded in
+            guard let viewer else { return }
+            if succeeded {
+                self?.closeViewer(viewer)
+            } else {
+                viewer.restartAutoHideTimer()
+            }
+        }
+        viewer.present(navigation, animated: true)
+    }
+
+    private func closeViewer(_ viewer: Viewer) {
+        viewer.dismiss(animated: true) { [weak self] in
+            self?.viewer = nil
+            self?.importDidDismiss()
+        }
     }
 
     func showImport(for url: URL) -> Bool {
@@ -354,10 +410,6 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         if selecting { setSelectionMode(false) }
         performSegue(withIdentifier: "ShowImport", sender: url)
         return true
-    }
-
-    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-        importDidDismiss()
     }
 
     private func importDidDismiss() {
@@ -400,7 +452,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         )
     }
 
-    func refreshDirectory(at url: URL) -> Bool {
+    func refreshDirectory(at url: URL, errorPresenter: UIViewController? = nil) -> Bool {
         switch fileSystemManager.listDirectory(at: url) {
         case let .success(items):
             currentDirectoryContent = items
@@ -409,7 +461,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             reloadFiles()
             return true
         case let .failure(error):
-            displayError(message: "Could not load the directory: \(error.localizedDescription)")
+            displayError(message: "Could not load the directory: \(error.localizedDescription)", in: errorPresenter)
             return false
         }
     }
@@ -446,18 +498,20 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         return true
     }
 
-    func displayError(message: String) {
+    func displayError(message: String, in presenter: UIViewController? = nil) {
+        let presenter = presenter ?? self
         print(message)
-        if let alert = presentedViewController as? UIAlertController {
+        if let alert = presenter.presentedViewController as? UIAlertController {
             alert.message = [alert.message, message].compactMap { $0 }.joined(separator: "\n")
             return
         }
-        let alert = UIAlertController(title: "File Browser Error", message: message, preferredStyle: .alert)
+        let alert = UIAlertController(title: "File Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self, weak alert] _ in
             alert?.dismiss(animated: true) {
                 self?.presentPendingImport()
+                (presenter as? Viewer)?.restartAutoHideTimer()
             }
         })
-        present(alert, animated: true)
+        presenter.present(alert, animated: true)
     }
 }

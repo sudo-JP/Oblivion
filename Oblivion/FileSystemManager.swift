@@ -38,6 +38,11 @@ enum DirectoryItem {
     }
 }
 
+enum FileTransferOperation {
+    case copy
+    case move
+}
+
 extension FileManager {
     func isDirectory(atPath path: String) -> Bool {
         var isDir: ObjCBool = false
@@ -107,26 +112,24 @@ class FileSystemManager {
         }
     }
     
-    // Moving file
-    public func moveFile(path: URL, dst: URL) -> Result<Void, FileOperationError> {
-        do {
-            try fileManager.moveItem(at: path, to: dst)
-            return .success(())
-        } catch {
-            return .failure(.failMoveFile("\(error)"))
-        }
-    }
-
-    public func copyFile(path: URL, dst: URL) -> Result<Void, FileOperationError> {
+    public func transferFile(path: URL, dst: URL, operation: FileTransferOperation) -> Result<Void, FileOperationError> {
         guard !isProtectedPath(at: dst) else { return .failure(.invalidPath(dst)) }
+        guard operation != .move || !isProtectedPath(at: path) else {
+            return .failure(.invalidPath(path))
+        }
         guard !fileManager.fileExists(atPath: dst.path) else {
             return .failure(.fileAlreadyExists(dst))
         }
         do {
-            try fileManager.copyItem(at: path, to: dst)
+            switch operation {
+            case .copy: try fileManager.copyItem(at: path, to: dst)
+            case .move: try fileManager.moveItem(at: path, to: dst)
+            }
             return .success(())
         } catch {
-            return .failure(.failCopyFile(error.localizedDescription))
+            return .failure(operation == .copy
+                            ? .failCopyFile(error.localizedDescription)
+                            : .failMoveFile(error.localizedDescription))
         }
     }
     
