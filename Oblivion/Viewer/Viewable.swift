@@ -7,14 +7,16 @@
 import UIKit
 
 enum RetrieveViewableError: Error {
-    case IndexOutOfRange
     case InvalidSize
-    case InvalidPageBounds
-    case CannotOpen
     case Cancelled
 }
 
-nonisolated protocol Viewable: Sendable {
-    func open() async -> Result<Int, ViewerError>
-    func image(forPage index: Int, size: CGSize) async -> Result<UIImage, RetrieveViewableError>
+protocol Viewable: AnyObject {
+    var contentView: UIView { get }
+    var pageCount: Int { get }
+    var currentPage: Int { get }
+    var isZoomed: Bool { get }
+    var onPageChange: ((Int) -> Void)? { get set }
+    func toggleZoom(at point: CGPoint)
+    func fitToView()
 }

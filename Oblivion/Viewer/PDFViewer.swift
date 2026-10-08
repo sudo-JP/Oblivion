@@ -4,60 +4,55 @@
 //
 //  Created by Jason Phan on 2026-10-05.
 //
-import Foundation
 import PDFKit
-import UIKit
 
-actor PDFViewer: Viewable {
-    private let url: URL
-    private var document: PDFDocument?
-    
-    init(url: URL) {
-        self.url = url
+final class PDFViewer: NSObject, Viewable {
+    let pdfView = PDFView()
+    var onPageChange: ((Int) -> Void)?
+    var contentView: UIView { pdfView }
+    var pageCount: Int { pdfView.document?.pageCount ?? 0 }
+    var currentPage: Int { pdfView.currentPage.flatMap { pdfView.document?.index(for: $0) } ?? 0 }
+    var isZoomed: Bool { pdfView.scaleFactor > pdfView.scaleFactorForSizeToFit + 0.001 }
+
+    private init(document: PDFDocument) {
+        super.init()
+        pdfView.backgroundColor = .black
+        pdfView.pageShadowsEnabled = false
+        pdfView.displayMode = .singlePage
+        pdfView.displayDirection = .horizontal
+        pdfView.usePageViewController(true)
+        pdfView.document = document
+        pdfView.autoScales = true
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(pageChanged(_:)), name: .PDFViewPageChanged, object: pdfView
+        )
     }
 
-    func open() -> Result<Int, ViewerError> {
+    static func open(_ url: URL) async -> Result<any Viewable, ViewerError> {
+        let document = await loadDocument(at: url)
         guard !Task.isCancelled else { return .failure(.rendering(.Cancelled)) }
-        guard let document = PDFDocument(url: url), !document.isLocked else {
-            return .failure(.cannotOpen(url))
-        }
-        self.document = document
-        return .success(document.pageCount)
+        guard let document else { return .failure(.cannotOpen(url)) }
+        return .success(PDFViewer(document: document))
     }
-    
-    func image(forPage index: Int, size: CGSize) -> Result<UIImage, RetrieveViewableError> {
-        guard !Task.isCancelled else { return .failure(.Cancelled) }
-        guard let document else { return .failure(.CannotOpen) }
-        guard index >= 0, index < document.pageCount,
-              let page = document.page(at: index) else {
-            return .failure(.IndexOutOfRange)
-        }
-        guard size.width.isFinite, size.height.isFinite,
-              size.width > 0, size.height > 0 else {
-            return .failure(.InvalidSize)
-        }
-        let pageRect = page.bounds(for: .mediaBox)
-        guard pageRect.minX.isFinite, pageRect.minY.isFinite,
-              pageRect.width.isFinite, pageRect.height.isFinite,
-              pageRect.width > 0, pageRect.height > 0 else {
-            return .failure(.InvalidPageBounds)
-        }
-        let scale = min(size.width / pageRect.width, size.height / pageRect.height)
-        let fittedSize = CGSize(width: pageRect.width * scale, height: pageRect.height * scale)
-        
-        let renderer = UIGraphicsImageRenderer(size: fittedSize)
-        let img = renderer.image { ctx in
-            UIColor.white.set()
-            ctx.fill(CGRect(origin: .zero, size: fittedSize))
-            
-            ctx.cgContext.translateBy(x: 0, y: fittedSize.height)
-            ctx.cgContext.scaleBy(x: scale, y: -scale)
-            ctx.cgContext.translateBy(x: -pageRect.minX, y: -pageRect.minY)
-            
-            page.draw(with: .mediaBox, to: ctx.cgContext)
-        }
-        
-        return Task.isCancelled ? .failure(.Cancelled) : .success(img)
+
+    @concurrent private static func loadDocument(at url: URL) async -> sending PDFDocument? {
+        guard let document = PDFDocument(url: url), !document.isLocked else { return nil }
+        return document
     }
-    
+
+    func fitToView() {
+        pdfView.layoutIfNeeded()
+        let fit = pdfView.scaleFactorForSizeToFit
+        pdfView.minScaleFactor = fit
+        pdfView.maxScaleFactor = fit * 4
+        pdfView.scaleFactor = fit
+    }
+
+    func toggleZoom(at point: CGPoint) {
+        pdfView.scaleFactor = isZoomed ? pdfView.scaleFactorForSizeToFit : pdfView.scaleFactorForSizeToFit * 2
+    }
+
+    @objc private func pageChanged(_ notification: Notification) {
+        onPageChange?(currentPage)
+    }
 }

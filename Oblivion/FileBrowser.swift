@@ -71,10 +71,11 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             completion(false)
             return
         }
-        let names = urls.map(\.lastPathComponent).joined(separator: "\n")
+        let directoryNote = urls.contains { FileManager.default.isDirectory(atPath: $0.path) }
+            ? " Directories and their contents will also be deleted." : ""
         let alert = UIAlertController(
-            title: "Permanently Delete \(urls.count) \(urls.count == 1 ? "Item" : "Items")?",
-            message: "\(names)\n\nDirectories and all their contents will be deleted. This cannot be undone.",
+            title: "Delete \(urls.count) \(urls.count == 1 ? "Item" : "Items")?",
+            message: "This cannot be undone.\(directoryNote)",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
@@ -417,7 +418,6 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             preconditionFailure("ShowViewer must receive a document and present Viewer.")
         }
         viewer.document = document
-        viewer.firstPagePreview = thumbnails.object(forKey: document.url as NSURL)
         for task in thumbnailTasks.values { task.cancel() }
         thumbnailTasks.removeAll()
         viewer.onMove = { [weak self, weak viewer] in

@@ -260,56 +260,10 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" pagingEnabled="YES" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="94Q-m3-kDA">
+                            <view clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="94Q-m3-kDA" userLabel="Content Container">
                                 <rect key="frame" x="0.0" y="59" width="393" height="759"/>
                                 <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="wGw-P0-XHM">
-                                    <size key="itemSize" width="128" height="128"/>
-                                    <size key="headerReferenceSize" width="0.0" height="0.0"/>
-                                    <size key="footerReferenceSize" width="0.0" height="0.0"/>
-                                    <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
-                                </collectionViewFlowLayout>
-                                <cells>
-                                    <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="PageCell" id="u4d-f5-vgQ">
-                                        <rect key="frame" x="0.0" y="0.0" width="128" height="128"/>
-                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                        <collectionViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="vRr-If-X7e">
-                                            <rect key="frame" x="0.0" y="0.0" width="128" height="128"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" tag="302" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" minimumZoomScale="1" maximumZoomScale="4" translatesAutoresizingMaskIntoConstraints="NO" id="viewer-page-zoom" userLabel="Page Zoom Scroll View">
-                                                    <rect key="frame" x="12" y="12" width="104" height="104"/>
-                                                    <subviews>
-                                                        <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="301" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="LWJ-mZ-c3U">
-                                                            <rect key="frame" x="0.0" y="0.0" width="104" height="104"/>
-                                                        </imageView>
-                                                    </subviews>
-                                                    <constraints>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="leading" secondItem="viewer-zoom-content-guide" secondAttribute="leading" id="viewer-image-leading"/>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="trailing" secondItem="viewer-zoom-content-guide" secondAttribute="trailing" id="viewer-image-trailing"/>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="top" secondItem="viewer-zoom-content-guide" secondAttribute="top" id="viewer-image-top"/>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="bottom" secondItem="viewer-zoom-content-guide" secondAttribute="bottom" id="viewer-image-bottom"/>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="width" secondItem="viewer-zoom-frame-guide" secondAttribute="width" id="viewer-image-width"/>
-                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="height" secondItem="viewer-zoom-frame-guide" secondAttribute="height" id="viewer-image-height"/>
-                                                    </constraints>
-                                                    <viewLayoutGuide key="contentLayoutGuide" id="viewer-zoom-content-guide"/>
-                                                    <viewLayoutGuide key="frameLayoutGuide" id="viewer-zoom-frame-guide"/>
-                                                </scrollView>
-                                            </subviews>
-                                            <constraints>
-                                                <constraint firstAttribute="bottom" secondItem="viewer-page-zoom" secondAttribute="bottom" constant="12" id="LnP-hs-84l"/>
-                                                <constraint firstItem="viewer-page-zoom" firstAttribute="leading" secondItem="vRr-If-X7e" secondAttribute="leading" constant="12" id="MwX-Dz-TZS"/>
-                                                <constraint firstItem="viewer-page-zoom" firstAttribute="top" secondItem="vRr-If-X7e" secondAttribute="top" constant="12" id="T48-I3-KBe"/>
-                                                <constraint firstAttribute="trailing" secondItem="viewer-page-zoom" secondAttribute="trailing" constant="12" id="aTv-F2-VXp"/>
-                                            </constraints>
-                                        </collectionViewCellContentView>
-                                    </collectionViewCell>
-                                </cells>
-                                <connections>
-                                    <outlet property="dataSource" destination="Cy2-8P-3N1" id="viewer-page-data-source"/>
-                                    <outlet property="delegate" destination="Cy2-8P-3N1" id="viewer-page-delegate"/>
-                                </connections>
-                            </collectionView>
+                            </view>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="HrQ-rB-H5g">
                                 <rect key="frame" x="0.0" y="59" width="393" height="56"/>
                                 <subviews>
@@ -372,7 +326,7 @@
                     </view>
                     <connections>
                         <outlet property="fileNameLabel" destination="OiP-gb-ENm" id="Rh8-fQ-Hei"/>
-                        <outlet property="pageCollectionView" destination="94Q-m3-kDA" id="OxN-p3-VI2"/>
+                        <outlet property="contentContainer" destination="94Q-m3-kDA" id="OxN-p3-VI2"/>
                         <outlet property="topBarView" destination="HrQ-rB-H5g" id="WFc-rw-OM4"/>
                     </connections>
                 </viewController>
