@@ -245,7 +245,7 @@
                         <outlet property="doneButton" destination="browser-done-button" id="browser-done-outlet"/>
                         <outlet property="deleteButton" destination="browser-delete-button" id="browser-delete-outlet"/>
                         <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
-                        <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="fullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
+                        <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="overFullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="vWH-2q-Wzn" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
@@ -349,9 +349,13 @@
                             <constraint firstItem="8Bq-bh-2P1" firstAttribute="bottom" secondItem="viewer-page-indicator" secondAttribute="bottom" constant="12" id="viewer-indicator-bottom"/>
                         </constraints>
                     </view>
+                    <userDefinedRuntimeAttributes>
+                        <userDefinedRuntimeAttribute type="boolean" keyPath="modalPresentationCapturesStatusBarAppearance" value="YES"/>
+                    </userDefinedRuntimeAttributes>
                     <connections>
                         <outlet property="fileNameLabel" destination="OiP-gb-ENm" id="Rh8-fQ-Hei"/>
                         <outlet property="contentContainer" destination="94Q-m3-kDA" id="OxN-p3-VI2"/>
+                        <segue destination="Y0u-DD-F8j" kind="unwind" identifier="DismissViewer" unwindAction="unwindToBrowserFromViewer:" id="viewer-dismiss-unwind"/>
                         <outlet property="pageIndicator" destination="viewer-page-indicator" id="viewer-page-indicator-outlet"/>
                         <outlet property="pageIndicatorLabel" destination="viewer-page-indicator-label" id="viewer-page-indicator-label-outlet"/>
                         <outlet property="topBarView" destination="HrQ-rB-H5g" id="WFc-rw-OM4"/>

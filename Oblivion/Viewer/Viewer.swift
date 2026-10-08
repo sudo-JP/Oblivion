@@ -37,7 +37,7 @@ enum ViewerError: LocalizedError {
     }
 }
 
-class Viewer: UIViewController {
+class Viewer: UIViewController, UIGestureRecognizerDelegate {
     struct Document {
         let url: URL
         let content: any Viewable
@@ -191,6 +191,9 @@ class Viewer: UIViewController {
         singleTap.require(toFail: doubleTap)
         contentContainer.addGestureRecognizer(singleTap)
         contentContainer.addGestureRecognizer(doubleTap)
+        let dismissPan = UIPanGestureRecognizer(target: self, action: #selector(handleDismissPan(_:)))
+        dismissPan.delegate = self
+        contentContainer.addGestureRecognizer(dismissPan)
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(readerWillResignActive(_:)),
@@ -237,6 +240,61 @@ class Viewer: UIViewController {
         autoHideTimer?.invalidate()
         document?.content.toggleZoom(at: gesture.location(in: document?.content.contentView))
         restartAutoHideTimer()
+    }
+
+    static func beginsDismissal(velocity: CGPoint, isZoomed: Bool) -> Bool {
+        !isZoomed && velocity.y > abs(velocity.x)
+    }
+
+    static func completesDismissal(translation: CGFloat, velocity: CGFloat, height: CGFloat) -> Bool {
+        translation > height * 0.25 || velocity > 800
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let pan = gestureRecognizer as? UIPanGestureRecognizer, let document else { return true }
+        return Self.beginsDismissal(velocity: pan.velocity(in: view), isZoomed: document.content.isZoomed)
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+
+    @objc private func handleDismissPan(_ pan: UIPanGestureRecognizer) {
+        let height = view.bounds.height
+        let translation = pan.translation(in: view)
+        let progress = min(max(translation.y, 0) / height, 1)
+        switch pan.state {
+        case .began:
+            setControlsVisible(false, animated: true)
+        case .changed:
+            let scale = 1 - 0.25 * progress
+            contentContainer.transform = CGAffineTransform(translationX: translation.x, y: max(translation.y, 0))
+                .scaledBy(x: scale, y: scale)
+            view.backgroundColor = .black.withAlphaComponent(1 - progress)
+        case .ended where Self.completesDismissal(
+            translation: translation.y, velocity: pan.velocity(in: view).y, height: height
+        ):
+            let reduceMotion = UIAccessibility.isReduceMotionEnabled
+            UIView.animate(withDuration: 0.25, animations: {
+                if reduceMotion {
+                    self.view.alpha = 0
+                } else {
+                    self.contentContainer.transform = self.contentContainer.transform
+                        .concatenating(CGAffineTransform(translationX: 0, y: height))
+                }
+                self.view.backgroundColor = .clear
+            }, completion: { _ in
+                self.performSegue(withIdentifier: "DismissViewer", sender: self)
+            })
+        default:
+            UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.85, initialSpringVelocity: 0) {
+                self.contentContainer.transform = .identity
+                self.view.backgroundColor = .black
+            }
+        }
     }
 
     @objc func toggleControls() {
