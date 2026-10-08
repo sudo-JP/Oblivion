@@ -12,11 +12,15 @@
         <!--File Browser Navigation Controller-->
         <scene sceneID="lib-nav-scene">
             <objects>
-                <navigationController storyboardIdentifier="FileBrowserNavigationController" id="lib-nav-controller" userLabel="File Browser Navigation Controller" sceneMemberID="viewController">
+                <navigationController storyboardIdentifier="FileBrowserNavigationController" toolbarHidden="YES" id="lib-nav-controller" userLabel="File Browser Navigation Controller" sceneMemberID="viewController">
                     <navigationBar key="navigationBar" contentMode="scaleToFill" id="lib-navigation-bar">
                         <rect key="frame" x="0.0" y="59" width="393" height="54"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
+                    <toolbar key="toolbar" opaque="NO" contentMode="scaleToFill" id="browser-selection-toolbar">
+                        <rect key="frame" x="0.0" y="818" width="393" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </toolbar>
                     <connections>
                         <segue destination="lVk-ze-M7x" kind="relationship" relationship="rootViewController" id="lib-root-segue"/>
                     </connections>
@@ -53,7 +57,7 @@
                                                     <rect key="frame" x="0.0" y="0.0" width="100" height="48"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                     <subviews>
-                                                        <label opaque="NO" userInteractionEnabled="NO" tag="201" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Folder" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-name" userLabel="Folder Name">
+                                                        <label opaque="NO" userInteractionEnabled="NO" tag="201" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Directory" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-name" userLabel="Directory Name">
                                                             <rect key="frame" x="8" y="15.5" width="64" height="17"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                                             <color key="textColor" systemColor="systemBlueColor"/>
@@ -102,21 +106,21 @@
                                     <inset key="sectionInset" minX="16" minY="24" maxX="16" maxY="24"/>
                                 </collectionViewFlowLayout>
                                 <cells>
-                                    <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="BrowserItemCell" id="XZa-Ef-jMo" userLabel="File or Folder Cell">
+                                    <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="BrowserItemCell" id="XZa-Ef-jMo" userLabel="File or Directory Cell">
                                         <rect key="frame" x="16" y="24" width="140" height="220"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                         <collectionViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" insetsLayoutMarginsFromSafeArea="NO" id="UcB-S1-Gf8">
                                             <rect key="frame" x="0.0" y="0.0" width="140" height="220"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="101" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="F5C-9g-pEv" userLabel="Document Preview or Folder Image">
+                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="101" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="F5C-9g-pEv" userLabel="Document Preview or Directory Image">
                                                     <rect key="frame" x="25" y="8" width="90" height="124"/>
                                                     <constraints>
                                                         <constraint firstAttribute="width" constant="90" id="V3y-D5-wMr"/>
                                                         <constraint firstAttribute="height" constant="124" id="cdO-A3-Dr4"/>
                                                     </constraints>
                                                 </imageView>
-                                                <label opaque="NO" userInteractionEnabled="NO" tag="102" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Document.pdf" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="s3B-Ei-wBD" userLabel="File or Folder Name">
+                                                <label opaque="NO" userInteractionEnabled="NO" tag="102" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Document.pdf" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="s3B-Ei-wBD" userLabel="File or Directory Name">
                                                     <rect key="frame" x="4" y="144" width="132" height="17"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                                     <nil key="textColor"/>
@@ -127,6 +131,14 @@
                                                     <fontDescription key="fontDescription" type="system" pointSize="12"/>
                                                     <color key="textColor" systemColor="secondaryLabelColor"/>
                                                 </label>
+                                                <imageView hidden="YES" userInteractionEnabled="NO" tag="104" contentMode="scaleAspectFit" image="circle" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="browser-selection-indicator" userLabel="Selection Indicator">
+                                                    <rect key="frame" x="112" y="4" width="24" height="24"/>
+                                                    <color key="tintColor" systemColor="systemBlueColor"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="24" id="browser-selection-width"/>
+                                                        <constraint firstAttribute="height" constant="24" id="browser-selection-height"/>
+                                                    </constraints>
+                                                </imageView>
                                             </subviews>
                                             <constraints>
                                                 <constraint firstItem="F5C-9g-pEv" firstAttribute="centerX" secondItem="UcB-S1-Gf8" secondAttribute="centerX" id="4aB-W8-4zq"/>
@@ -137,6 +149,8 @@
                                                 <constraint firstItem="browser-item-detail" firstAttribute="leading" secondItem="UcB-S1-Gf8" secondAttribute="leading" constant="4" id="browser-item-detail-leading"/>
                                                 <constraint firstAttribute="trailing" secondItem="browser-item-detail" secondAttribute="trailing" constant="4" id="browser-item-detail-trailing"/>
                                                 <constraint firstItem="browser-item-detail" firstAttribute="top" secondItem="s3B-Ei-wBD" secondAttribute="bottom" constant="5" id="browser-item-detail-top"/>
+                                                <constraint firstItem="browser-selection-indicator" firstAttribute="top" secondItem="UcB-S1-Gf8" secondAttribute="top" constant="4" id="browser-selection-top"/>
+                                                <constraint firstAttribute="trailing" secondItem="browser-selection-indicator" secondAttribute="trailing" constant="4" id="browser-selection-trailing"/>
                                             </constraints>
                                         </collectionViewCellContentView>
                                     </collectionViewCell>
@@ -178,24 +192,42 @@
                             <constraint firstItem="browser-footer" firstAttribute="bottom" secondItem="F4h-3q-k1o" secondAttribute="bottom" id="browser-footer-bottom"/>
                         </constraints>
                     </view>
+                    <toolbarItems>
+                        <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-delete-leading-space"/>
+                        <barButtonItem enabled="NO" title="Delete" id="browser-delete-button" userLabel="Delete Selected Items">
+                            <color key="tintColor" systemColor="systemRedColor"/>
+                            <connections>
+                                <action selector="deleteSelectedItems:" destination="lVk-ze-M7x" id="browser-delete-action"/>
+                            </connections>
+                        </barButtonItem>
+                        <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-delete-trailing-space"/>
+                    </toolbarItems>
                     <navigationItem key="navigationItem" title="Home" largeTitleDisplayMode="never" id="0n2-Mc-90b">
-                        <barButtonItem key="leftBarButtonItem" enabled="NO" image="chevron.left" catalog="system" id="browser-back-button" userLabel="Parent Folder">
-                            <accessibility key="accessibilityConfiguration" label="Back to parent folder"/>
+                        <barButtonItem key="leftBarButtonItem" enabled="NO" image="chevron.left" catalog="system" id="browser-back-button" userLabel="Parent Directory">
+                            <accessibility key="accessibilityConfiguration" label="Back to parent directory"/>
                             <connections>
                                 <action selector="goToParentDirectory:" destination="lVk-ze-M7x" id="browser-back-action"/>
                             </connections>
                         </barButtonItem>
-                        <barButtonItem key="rightBarButtonItem" title="Import" id="lib-import-button" userLabel="Show Import Popup">
-                            <connections>
-                                <action selector="importFile:" destination="lVk-ze-M7x" id="browser-import-action"/>
-                            </connections>
-                        </barButtonItem>
+                        <rightBarButtonItems>
+                            <barButtonItem image="ellipsis.circle" catalog="system" id="browser-more-button" userLabel="Directory Actions">
+                                <accessibility key="accessibilityConfiguration" label="More directory actions"/>
+                            </barButtonItem>
+                            <barButtonItem systemItem="done" id="browser-done-button" userLabel="Finish Selection">
+                                <connections>
+                                    <action selector="finishSelection:" destination="lVk-ze-M7x" id="browser-done-action"/>
+                                </connections>
+                            </barButtonItem>
+                        </rightBarButtonItems>
                     </navigationItem>
                     <connections>
                         <outlet property="breadcrumbCollectionView" destination="K3J-Th-69N" id="browser-breadcrumb-outlet"/>
                         <outlet property="fileCollectionView" destination="WFF-zG-RIa" id="browser-grid-outlet"/>
                         <outlet property="backButton" destination="browser-back-button" id="browser-back-outlet"/>
                         <outlet property="itemCountLabel" destination="browser-item-count" id="browser-count-outlet"/>
+                        <outlet property="moreButton" destination="browser-more-button" id="browser-more-outlet"/>
+                        <outlet property="doneButton" destination="browser-done-button" id="browser-done-outlet"/>
+                        <outlet property="deleteButton" destination="browser-delete-button" id="browser-delete-outlet"/>
                         <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
                         <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="fullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
                     </connections>
@@ -212,7 +244,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" pagingEnabled="YES" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="94Q-m3-kDA">
+                            <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" pagingEnabled="YES" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="94Q-m3-kDA">
                                 <rect key="frame" x="0.0" y="59" width="393" height="759"/>
                                 <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                                 <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="wGw-P0-XHM">
@@ -308,23 +340,6 @@
                                     <constraint firstAttribute="bottom" secondItem="1Iz-4R-uHp" secondAttribute="bottom" constant="6" id="yPV-2o-dg1"/>
                                 </constraints>
                             </view>
-                            <view contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" translatesAutoresizingMaskIntoConstraints="NO" id="wi4-mJ-ZIj">
-                                <rect key="frame" x="0.0" y="773" width="393" height="45"/>
-                                <subviews>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0 / 0" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Oqd-3v-Njw">
-                                        <rect key="frame" x="179.66666666666666" y="12" width="34" height="21"/>
-                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                        <nil key="textColor"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
-                                </subviews>
-                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                                <constraints>
-                                    <constraint firstItem="Oqd-3v-Njw" firstAttribute="top" secondItem="wi4-mJ-ZIj" secondAttribute="top" constant="12" id="UoX-bm-AqD"/>
-                                    <constraint firstItem="Oqd-3v-Njw" firstAttribute="centerX" secondItem="wi4-mJ-ZIj" secondAttribute="centerX" id="dQj-tc-ChA"/>
-                                    <constraint firstAttribute="bottom" secondItem="Oqd-3v-Njw" secondAttribute="bottom" constant="12" id="q8z-R5-xcc"/>
-                                </constraints>
-                            </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="8Bq-bh-2P1"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
@@ -332,20 +347,15 @@
                             <constraint firstItem="94Q-m3-kDA" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="Cyt-0K-QDn"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="FMw-LT-qPe"/>
                             <constraint firstItem="8Bq-bh-2P1" firstAttribute="bottom" secondItem="94Q-m3-kDA" secondAttribute="bottom" id="b5B-zG-Zje"/>
-                            <constraint firstItem="wi4-mJ-ZIj" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="cCj-nB-e7L"/>
                             <constraint firstItem="94Q-m3-kDA" firstAttribute="top" secondItem="8Bq-bh-2P1" secondAttribute="top" id="edp-2n-iII"/>
                             <constraint firstItem="94Q-m3-kDA" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="eet-jX-EXX"/>
-                            <constraint firstItem="wi4-mJ-ZIj" firstAttribute="bottom" secondItem="8Bq-bh-2P1" secondAttribute="bottom" id="sq3-x5-Ih5"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="top" secondItem="8Bq-bh-2P1" secondAttribute="top" id="tiK-HX-4Qq"/>
-                            <constraint firstItem="wi4-mJ-ZIj" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="vQq-LE-B5V"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="z4T-A4-v0R"/>
                         </constraints>
                     </view>
                     <connections>
-                        <outlet property="bottomBarView" destination="wi4-mJ-ZIj" id="XYo-Xk-F0B"/>
                         <outlet property="fileNameLabel" destination="OiP-gb-ENm" id="Rh8-fQ-Hei"/>
                         <outlet property="pageCollectionView" destination="94Q-m3-kDA" id="OxN-p3-VI2"/>
-                        <outlet property="pageCountLabel" destination="Oqd-3v-Njw" id="lmh-BH-4kg"/>
                         <outlet property="topBarView" destination="HrQ-rB-H5g" id="WFc-rw-OM4"/>
                     </connections>
                 </viewController>
@@ -490,7 +500,7 @@
                                                     <action selector="goBack:" destination="imp-view-controller" eventType="touchUpInside" id="imp-back-action"/>
                                                 </connections>
                                             </button>
-                                            <tableView clipsSubviews="YES" tag="100" contentMode="scaleToFill" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="57" estimatedRowHeight="57" sectionHeaderHeight="0.0" sectionFooterHeight="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="imp-folder-table" userLabel="Destination Folder Table">
+                                            <tableView clipsSubviews="YES" tag="100" contentMode="scaleToFill" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="57" estimatedRowHeight="57" sectionHeaderHeight="0.0" sectionFooterHeight="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="imp-folder-table" userLabel="Destination Directory Table">
                                                 <rect key="frame" x="0.0" y="383.33333333333331" width="353" height="197.99999999999994"/>
                                                 <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
                                                 <constraints>
@@ -499,19 +509,19 @@
                                                 <color key="separatorColor" systemColor="separatorColor"/>
                                                 <inset key="separatorInset" minX="57" minY="0.0" maxX="0.0" maxY="0.0"/>
                                                 <prototypes>
-                                                    <tableViewCell contentMode="scaleToFill" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="FolderCell" textLabel="imp-cell-title" detailTextLabel="imp-cell-count" imageView="imp-cell-image" rowHeight="57" style="IBUITableViewCellStyleValue1" id="imp-folder-cell" userLabel="Folder Cell">
+                                                    <tableViewCell contentMode="scaleToFill" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="FolderCell" textLabel="imp-cell-title" detailTextLabel="imp-cell-count" imageView="imp-cell-image" rowHeight="57" style="IBUITableViewCellStyleValue1" id="imp-folder-cell" userLabel="Directory Cell">
                                                         <rect key="frame" x="0.0" y="50" width="353" height="57"/>
                                                         <autoresizingMask key="autoresizingMask"/>
                                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="imp-folder-cell" id="imp-cell-content">
                                                             <rect key="frame" x="0.0" y="0.0" width="322.66666666666669" height="57"/>
                                                             <autoresizingMask key="autoresizingMask"/>
                                                             <subviews>
-                                                                <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="folder" catalog="system" id="imp-cell-image">
+                                                                <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="folder.fill" catalog="system" id="imp-cell-image">
                                                                     <rect key="frame" x="20.5" y="19.666666666666671" width="23" height="17.333333333333332"/>
                                                                     <autoresizingMask key="autoresizingMask"/>
                                                                     <color key="tintColor" systemColor="systemBlueColor"/>
                                                                 </imageView>
-                                                                <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Folder" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="imp-cell-title">
+                                                                <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Directory" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="imp-cell-title">
                                                                     <rect key="frame" x="58.5" y="19" width="48.333333333333336" height="20.333333333333332"/>
                                                                     <autoresizingMask key="autoresizingMask"/>
                                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
@@ -539,8 +549,8 @@
                                             </tableView>
                                             <label opaque="NO" userInteractionEnabled="NO" tag="104" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-helper-label" userLabel="Import Help Label">
                                                 <rect key="frame" x="0.0" y="597.33333333333337" width="353" height="33.666666666666629"/>
-                                                <string key="text">Choose a folder, or import here.
-The original PDF stays in its source location.</string>
+                                                <string key="text">Choose a directory, or import here.
+The original file stays in its source location.</string>
                                                 <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
                                                 <color key="textColor" systemColor="secondaryLabelColor"/>
                                             </label>
@@ -570,7 +580,7 @@ The original PDF stays in its source location.</string>
                         </constraints>
                     </view>
                     <toolbarItems>
-                        <barButtonItem title="New Folder" id="imp-new-folder-item" userLabel="New Folder Button">
+                        <barButtonItem title="New Directory" id="imp-new-folder-item" userLabel="New Directory Button">
                             <connections>
                                 <action selector="createDir:" destination="imp-view-controller" id="imp-new-folder-action"/>
                             </connections>
@@ -616,8 +626,9 @@ The original PDF stays in its source location.</string>
     </scenes>
     <resources>
         <image name="chevron.left" catalog="system" width="97" height="128"/>
+        <image name="circle" catalog="system" width="128" height="123"/>
         <image name="ellipsis.circle" catalog="system" width="128" height="123"/>
-        <image name="folder" catalog="system" width="128" height="96"/>
+        <image name="folder.fill" catalog="system" width="128" height="96"/>
         <systemColor name="secondaryLabelColor">
             <color red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

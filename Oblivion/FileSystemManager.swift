@@ -6,18 +6,36 @@
 //
 import Foundation
 
-enum FileOperationError: Error {
+enum FileOperationError: LocalizedError {
     case failMoveFile(String)
     case failCopyFile(String)
     case failCreateDirectory(String)
     case failDeleteFile(String)
     case invalidPath(URL)
     case fileAlreadyExists(URL)
+
+    var errorDescription: String? {
+        switch self {
+        case let .failMoveFile(message), let .failCopyFile(message),
+             let .failCreateDirectory(message), let .failDeleteFile(message):
+            return message
+        case let .invalidPath(url):
+            return "Cannot access or modify \(url.lastPathComponent): the path is unavailable or protected."
+        case let .fileAlreadyExists(url):
+            return "An item named \(url.lastPathComponent) already exists in this directory."
+        }
+    }
 }
 
 enum DirectoryItem {
     case file(URL)
     case directory(URL)
+
+    var url: URL {
+        switch self {
+        case let .file(url), let .directory(url): return url
+        }
+    }
 }
 
 extension FileManager {
@@ -33,24 +51,51 @@ class FileSystemManager {
     var documentsDirectory: URL? {
         fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
     }
+
+    func isImportInbox(at url: URL) -> Bool {
+        guard url.isFileURL, let documentsDirectory else { return false }
+        let inbox = documentsDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("Inbox", isDirectory: true).standardizedFileURL.pathComponents
+        return url.standardizedFileURL.pathComponents.starts(with: inbox) ||
+            url.resolvingSymlinksInPath().standardizedFileURL.pathComponents.starts(with: inbox)
+    }
+
+    func isProtectedPath(at url: URL) -> Bool {
+        guard url.isFileURL, let documentsDirectory else { return true }
+        let root = documentsDirectory.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        let target = url.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        return target.count <= root.count || !target.starts(with: root) || isImportInbox(at: url)
+    }
     
     // For deleting files
-    public func deleteFile(path: URL) -> Result<Void, FileOperationError> {
+    public func deleteFile(path: URL, matching identifier: NSObject) -> Result<Void, FileOperationError> {
+        guard !isProtectedPath(at: path) else { return .failure(.invalidPath(path)) }
+        var path = path
+        path.removeCachedResourceValue(forKey: .fileResourceIdentifierKey)
         do {
+            guard let currentIdentifier = try path.resourceValues(forKeys: [.fileResourceIdentifierKey])
+                .fileResourceIdentifier as? NSObject, identifier.isEqual(currentIdentifier) else {
+                return .failure(.failDeleteFile("The item changed after confirmation. Select it again."))
+            }
             try fileManager.removeItem(at: path)
         } catch {
-            return .failure(.failDeleteFile("\(error)"))
+            return .failure(.failDeleteFile(error.localizedDescription))
         }
         return .success(())
     }
     
     // For listing directory
     public func listDirectory(at directory: URL) -> Result<[DirectoryItem], FileOperationError> {
+        guard directory.isFileURL, let documentsDirectory,
+              directory.resolvingSymlinksInPath().standardizedFileURL == documentsDirectory.resolvingSymlinksInPath().standardizedFileURL ||
+                !isProtectedPath(at: directory) else {
+            return .failure(.invalidPath(directory))
+        }
         do {
             let contents = try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             
-            let items = contents.map { item in
-                if item.hasDirectoryPath {
+            let items = contents.filter { !isImportInbox(at: $0) }.map { item in
+                if fileManager.isDirectory(atPath: item.path) {
                     DirectoryItem.directory(item)
                 }  else { DirectoryItem.file(item) }
             }
@@ -73,6 +118,7 @@ class FileSystemManager {
     }
 
     public func copyFile(path: URL, dst: URL) -> Result<Void, FileOperationError> {
+        guard !isProtectedPath(at: dst) else { return .failure(.invalidPath(dst)) }
         guard !fileManager.fileExists(atPath: dst.path) else {
             return .failure(.fileAlreadyExists(dst))
         }
@@ -84,11 +130,24 @@ class FileSystemManager {
         }
     }
     
-    public func createDir(at path: URL) -> Result<Void, FileOperationError> {
+    public func createDir(named name: String, in parent: URL) -> Result<Void, FileOperationError> {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name != ".", name != "..",
+              !name.contains("/"), !name.contains("\0") else {
+            return .failure(.failCreateDirectory("Enter a valid directory name without slashes."))
+        }
+        let path = parent.appendingPathComponent(name, isDirectory: true)
+        guard parent.isFileURL, fileManager.isDirectory(atPath: parent.path),
+              !isProtectedPath(at: path) else {
+            return .failure(.invalidPath(path))
+        }
+        guard !fileManager.fileExists(atPath: path.path) else {
+            return .failure(.fileAlreadyExists(path))
+        }
         do {
             try fileManager.createDirectory(
                 at: path,
-                withIntermediateDirectories: true,
+                withIntermediateDirectories: false,
                 attributes: nil
             )
             return .success(())

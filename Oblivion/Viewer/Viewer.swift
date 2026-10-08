@@ -65,11 +65,8 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     @IBOutlet weak var pageCollectionView: UICollectionView!
     
     @IBOutlet weak var topBarView: UIView!
-    @IBOutlet weak var bottomBarView: UIView!
     
     @IBOutlet weak var fileNameLabel: UILabel!
-    
-    @IBOutlet weak var pageCountLabel: UILabel!
     
     @IBAction func showDocumentActions(_ sender: Any) {
         restartAutoHideTimer()
@@ -102,7 +99,6 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
             preconditionFailure("ShowViewer must supply a document before loading Viewer.")
         }
         fileNameLabel.text = document.url.lastPathComponent
-        pageCountLabel.text = "1 / \(document.content.pageCount)"
         pageCollectionView.contentInsetAdjustmentBehavior = .never
 
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
@@ -329,15 +325,12 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     private func setControlsVisible(_ visible: Bool, animated: Bool) {
         controlsVisible = visible
         topBarView.isUserInteractionEnabled = visible
-        bottomBarView.isUserInteractionEnabled = visible
         topBarView.accessibilityElementsHidden = !visible
-        bottomBarView.accessibilityElementsHidden = !visible
         UIView.animate(
             withDuration: animated ? 0.2 : 0,
             delay: 0, options: [.beginFromCurrentState, .allowUserInteraction]
         ) {
             self.topBarView.alpha = visible ? 1 : 0
-            self.bottomBarView.alpha = visible ? 1 : 0
         }
         restartAutoHideTimer()
     }
@@ -386,7 +379,6 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         guard width > 0 else { return }
         let page = Int((pageCollectionView.contentOffset.x / width).rounded())
         currentPage = min(max(page, 0), document.content.pageCount - 1)
-        pageCountLabel.text = "\(currentPage + 1) / \(document.content.pageCount)"
     }
 
     private func displayError(message: String) {

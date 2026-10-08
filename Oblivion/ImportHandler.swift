@@ -55,33 +55,16 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
             guard let self, let alert else { return }
-            let directoryName = alert.textFields?.first?.text?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-            if directoryName.isEmpty ||
-                directoryName == "." || directoryName == ".." ||
-                directoryName.contains("/") || directoryName.contains("\0") {
-                self.displayError(message: "Enter a valid directory name without slashes.")
-                return
-            }
+            let directoryName = alert.textFields?.first?.text ?? ""
             guard let parentURL = self.currentDirectoryURL else {
                 self.displayError(message: "Could not get the current directory.")
                 return
             }
-            let newDirectoryURL = parentURL.appendingPathComponent(
-                directoryName,
-                isDirectory: true
-            )
-
-            guard !FileManager.default.fileExists(atPath: newDirectoryURL.path) else {
-                self.displayError(message: "An item with that name already exists.")
-                return
-            }
-            switch self.fileSystemManager.createDir(at: newDirectoryURL) {
+            switch self.fileSystemManager.createDir(named: directoryName, in: parentURL) {
             case .success:
                 _ = self.refreshDirectory(at: parentURL)
             case let .failure(error):
-                self.displayError(message: "Could not create the directory: \(error)")
+                self.displayError(message: "Could not create the directory: \(error.localizedDescription)")
             }
         })
         present(alert, animated: true)
@@ -138,7 +121,10 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         switch fileContent {
         case let .directory(url):
             content.text = url.lastPathComponent
-            content.image = UIImage(systemName: "folder")
+            content.image = UIImage(
+                systemName: "folder.fill",
+                withConfiguration: UIImage.SymbolConfiguration(hierarchicalColor: .systemBlue)
+            )
         case let .file(url):
             content.text = url.lastPathComponent
             content.image = UIImage(systemName: "doc.fill")
@@ -186,7 +172,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             displayError(message: "An item named \(existingURL.lastPathComponent) already exists in this directory.")
             return false
         case let .failure(error):
-            displayError(message: "Could not import the file: \(error)")
+            displayError(message: "Could not import the file: \(error.localizedDescription)")
             return false
         }
     }
@@ -199,10 +185,17 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
                 if case .directory = $0 { return true }
                 return false
             }
-            directoryTableView.reloadData()
+            if UIAccessibility.isReduceMotionEnabled {
+                directoryTableView.reloadData()
+            } else {
+                UIView.transition(with: directoryTableView, duration: 0.2,
+                                  options: [.transitionCrossDissolve, .allowUserInteraction], animations: {
+                    self.directoryTableView.reloadData()
+                })
+            }
             return true
         case let .failure(error):
-            displayError(message: "Could not load the directory: \(error)")
+            displayError(message: "Could not load the directory: \(error.localizedDescription)")
             return false
         }
     }
