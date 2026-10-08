@@ -15,12 +15,6 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     
     @IBOutlet weak var fileNameLabel: UILabel!
     @IBOutlet weak var directoryTableView: UITableView!
-    @IBOutlet weak var errorMessageView: UIStackView!
-    @IBOutlet weak var errorMessageLabel: UILabel!
-
-    @IBAction func closeErrorMessage(_ sender: UIButton) {
-        errorMessageView.isHidden = true
-    }
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
         dismiss(animated: true)
@@ -91,6 +85,11 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     override func viewDidLoad() {
         super.viewDidLoad()
         fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard currentDirectoryURL == nil else { return }
         guard let currentURL = fileSystemManager.documentsDirectory else {
             displayError(message: "The Documents directory is unavailable.")
             return
@@ -179,7 +178,11 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
     }
 
-    func setCurrentDirectory(at url: URL) -> Bool {
+    func setCurrentDirectory(at url: URL?) -> Bool {
+        guard let url else {
+            displayError(message: "No directory was provided.")
+            return false
+        }
         if !refreshDirectory(at: url) {
             return false
         }
@@ -189,9 +192,9 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
     
     func displayError(message: String) {
-        errorMessageLabel.text = message
-        errorMessageView.isHidden = false
-
+        let alert = UIAlertController(title: "Import Error", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 
 }

@@ -6,13 +6,14 @@
 //
 import Foundation
 import PDFKit
+import UIKit
 
 class PDFViewer: Viewable {
     var pageCount: Int
     let document: PDFDocument
     
     init?(url: URL) {
-        guard let document = PDFDocument(url: url) else {
+        guard let document = PDFDocument(url: url), !document.isLocked else {
             return nil
         }
         self.document = document
@@ -20,7 +21,8 @@ class PDFViewer: Viewable {
     }
     
     func image(forPage index: Int, size: CGSize) -> Result<UIImage, RetrieveViewableError> {
-        guard let page = document.page(at: index) else {
+        guard index >= 0, index < pageCount,
+              let page = document.page(at: index) else {
             return .failure(.IndexOutOfRange)
         }
         guard size.width.isFinite, size.height.isFinite,
@@ -28,6 +30,11 @@ class PDFViewer: Viewable {
             return .failure(.InvalidSize)
         }
         let pageRect = page.bounds(for: .mediaBox)
+        guard pageRect.minX.isFinite, pageRect.minY.isFinite,
+              pageRect.width.isFinite, pageRect.height.isFinite,
+              pageRect.width > 0, pageRect.height > 0 else {
+            return .failure(.InvalidPageBounds)
+        }
         let scale = min(size.width / pageRect.width, size.height / pageRect.height)
         let offsetX = (size.width - pageRect.width * scale) / 2
         let offsetY = (size.height - pageRect.height * scale) / 2

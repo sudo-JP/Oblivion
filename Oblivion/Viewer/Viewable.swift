@@ -9,6 +9,7 @@ import UIKit
 enum RetrieveViewableError: Error {
     case IndexOutOfRange
     case InvalidSize
+    case InvalidPageBounds
 }
 
 protocol Viewable {
