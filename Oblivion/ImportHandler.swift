@@ -5,19 +5,31 @@
 //  Created by Jason Phan on 2026-10-03.
 //
 import UIKit
+import UniformTypeIdentifiers
 
 class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate {
     private let fileSystemManager = FileSystemManager()
     var sourceURL: URL?
+    var initialDirectoryURL: URL?
+    var onDismiss: (() -> Void)?
     var currentDirectoryURL: URL?
     var currentDirectoryContent: [DirectoryItem] = []
-    var directoryStack: [URL] = []
+    var directoryStack: [URL] = [] {
+        didSet { updateDestinationLabels() }
+    }
     
     @IBOutlet weak var fileNameLabel: UILabel!
     @IBOutlet weak var directoryTableView: UITableView!
+    @IBOutlet weak var fileImageView: UIImageView!
+    @IBOutlet weak var fileDetailLabel: UILabel!
+    @IBOutlet weak var destinationNameLabel: UILabel!
+    @IBOutlet weak var destinationPathLabel: UILabel!
+    @IBOutlet weak var defaultBadgeLabel: UILabel!
+    @IBOutlet weak var toolbarDestinationLabel: UILabel!
+    @IBOutlet weak var backButton: UIButton!
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
-        dismiss(animated: true)
+        dismiss(animated: true, completion: onDismiss)
     }
     
     @IBAction func confirmImport(_ sender: UIBarButtonItem) {
@@ -27,7 +39,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
 
         if handle(url: sourceURL) {
-            dismiss(animated: true)
+            dismiss(animated: true, completion: onDismiss)
         }
     }
 
@@ -84,13 +96,30 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        title = "Import File"
         fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
+        updateDestinationLabels()
+        guard let sourceURL else { return }
+        fileDetailLabel.text = UTType(filenameExtension: sourceURL.pathExtension)?.localizedDescription ?? "Document"
+        let hasScopedAccess = sourceURL.startAccessingSecurityScopedResource()
+        defer {
+            if hasScopedAccess {
+                sourceURL.stopAccessingSecurityScopedResource()
+            }
+        }
+        switch Viewer.thumbnail(for: sourceURL, size: CGSize(width: 44, height: 56)) {
+        case let .success(image):
+            fileImageView.image = image
+        case let .failure(error):
+            fileDetailLabel.text = "Preview unavailable"
+            print("Could not preview \(sourceURL.lastPathComponent): \(error.localizedDescription)")
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         guard currentDirectoryURL == nil else { return }
-        guard let currentURL = fileSystemManager.documentsDirectory else {
+        guard let currentURL = initialDirectoryURL ?? fileSystemManager.documentsDirectory else {
             displayError(message: "The Documents directory is unavailable.")
             return
         }
@@ -133,8 +162,8 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
         
     public func handle(url: URL) -> Bool {
-        guard url.isFileURL, url.pathExtension.lowercased() == "pdf" else {
-            displayError(message: "Only PDF files are currently supported.")
+        guard Viewer.supportsFile(at: url) else {
+            displayError(message: "This file type is not supported. Choose a PDF or a supported image.")
             return false
         }
             
@@ -188,13 +217,34 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
 
         currentDirectoryURL = url
+        updateDestinationLabels()
         return true
+    }
+
+    private func updateDestinationLabels() {
+        guard isViewLoaded else { return }
+        backButton.isEnabled = !directoryStack.isEmpty
+        guard let currentDirectoryURL else { return }
+        let root = fileSystemManager.documentsDirectory
+        let name = currentDirectoryURL == root ? "Home" : currentDirectoryURL.lastPathComponent
+        destinationNameLabel.text = name
+        destinationPathLabel.text = (directoryStack + [currentDirectoryURL]).map {
+            $0 == root ? "Home" : $0.lastPathComponent
+        }.joined(separator: " › ")
+        defaultBadgeLabel.isHidden = currentDirectoryURL != (initialDirectoryURL ?? root)
+        toolbarDestinationLabel.text = "Import into \(name)"
     }
     
     func displayError(message: String) {
         let alert = UIAlertController(title: "Import Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+        if let presentedViewController {
+            presentedViewController.dismiss(animated: true) { [weak self] in
+                self?.present(alert, animated: true)
+            }
+        } else {
+            present(alert, animated: true)
+        }
     }
 
 }

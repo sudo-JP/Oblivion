@@ -53,12 +53,12 @@
                                                     <rect key="frame" x="0.0" y="0.0" width="100" height="48"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                     <subviews>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Folder" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-name" userLabel="Folder Name">
+                                                        <label opaque="NO" userInteractionEnabled="NO" tag="201" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Folder" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-name" userLabel="Folder Name">
                                                             <rect key="frame" x="8" y="15.5" width="64" height="17"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                                             <color key="textColor" systemColor="systemBlueColor"/>
                                                         </label>
-                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" text="›" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-separator" userLabel="Path Separator">
+                                                        <label opaque="NO" userInteractionEnabled="NO" tag="202" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" text="›" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-separator" userLabel="Path Separator">
                                                             <rect key="frame" x="80" y="13" width="12" height="22"/>
                                                             <fontDescription key="fontDescription" type="system" pointSize="18"/>
                                                             <color key="textColor" systemColor="secondaryLabelColor"/>
@@ -77,6 +77,10 @@
                                                 </collectionViewCellContentView>
                                             </collectionViewCell>
                                         </cells>
+                                        <connections>
+                                            <outlet property="dataSource" destination="lVk-ze-M7x" id="browser-breadcrumb-data-source"/>
+                                            <outlet property="delegate" destination="lVk-ze-M7x" id="browser-breadcrumb-delegate"/>
+                                        </connections>
                                     </collectionView>
                                 </subviews>
                                 <color key="backgroundColor" systemColor="systemBackgroundColor"/>
@@ -225,15 +229,30 @@
                                             <rect key="frame" x="0.0" y="0.0" width="128" height="128"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="301" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="LWJ-mZ-c3U">
+                                                <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" tag="302" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" minimumZoomScale="1" maximumZoomScale="4" translatesAutoresizingMaskIntoConstraints="NO" id="viewer-page-zoom" userLabel="Page Zoom Scroll View">
                                                     <rect key="frame" x="12" y="12" width="104" height="104"/>
-                                                </imageView>
+                                                    <subviews>
+                                                        <imageView clipsSubviews="YES" userInteractionEnabled="NO" tag="301" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="LWJ-mZ-c3U">
+                                                            <rect key="frame" x="0.0" y="0.0" width="104" height="104"/>
+                                                        </imageView>
+                                                    </subviews>
+                                                    <constraints>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="leading" secondItem="viewer-zoom-content-guide" secondAttribute="leading" id="viewer-image-leading"/>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="trailing" secondItem="viewer-zoom-content-guide" secondAttribute="trailing" id="viewer-image-trailing"/>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="top" secondItem="viewer-zoom-content-guide" secondAttribute="top" id="viewer-image-top"/>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="bottom" secondItem="viewer-zoom-content-guide" secondAttribute="bottom" id="viewer-image-bottom"/>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="width" secondItem="viewer-zoom-frame-guide" secondAttribute="width" id="viewer-image-width"/>
+                                                        <constraint firstItem="LWJ-mZ-c3U" firstAttribute="height" secondItem="viewer-zoom-frame-guide" secondAttribute="height" id="viewer-image-height"/>
+                                                    </constraints>
+                                                    <viewLayoutGuide key="contentLayoutGuide" id="viewer-zoom-content-guide"/>
+                                                    <viewLayoutGuide key="frameLayoutGuide" id="viewer-zoom-frame-guide"/>
+                                                </scrollView>
                                             </subviews>
                                             <constraints>
-                                                <constraint firstAttribute="bottom" secondItem="LWJ-mZ-c3U" secondAttribute="bottom" constant="12" id="LnP-hs-84l"/>
-                                                <constraint firstItem="LWJ-mZ-c3U" firstAttribute="leading" secondItem="vRr-If-X7e" secondAttribute="leading" constant="12" id="MwX-Dz-TZS"/>
-                                                <constraint firstItem="LWJ-mZ-c3U" firstAttribute="top" secondItem="vRr-If-X7e" secondAttribute="top" constant="12" id="T48-I3-KBe"/>
-                                                <constraint firstAttribute="trailing" secondItem="LWJ-mZ-c3U" secondAttribute="trailing" constant="12" id="aTv-F2-VXp"/>
+                                                <constraint firstAttribute="bottom" secondItem="viewer-page-zoom" secondAttribute="bottom" constant="12" id="LnP-hs-84l"/>
+                                                <constraint firstItem="viewer-page-zoom" firstAttribute="leading" secondItem="vRr-If-X7e" secondAttribute="leading" constant="12" id="MwX-Dz-TZS"/>
+                                                <constraint firstItem="viewer-page-zoom" firstAttribute="top" secondItem="vRr-If-X7e" secondAttribute="top" constant="12" id="T48-I3-KBe"/>
+                                                <constraint firstAttribute="trailing" secondItem="viewer-page-zoom" secondAttribute="trailing" constant="12" id="aTv-F2-VXp"/>
                                             </constraints>
                                         </collectionViewCellContentView>
                                     </collectionViewCell>
@@ -374,10 +393,10 @@
                                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="imp-content-stack" userLabel="Import Content Stack">
                                         <rect key="frame" x="20" y="20" width="353" height="631"/>
                                         <subviews>
-                                            <view tag="101" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-summary" userLabel="PDF Summary">
+                                            <view tag="101" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-summary" userLabel="File Summary">
                                                 <rect key="frame" x="0.0" y="0.0" width="353" height="86"/>
                                                 <subviews>
-                                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-image" userLabel="PDF First Page Thumbnail">
+                                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-image" userLabel="File Thumbnail">
                                                         <rect key="frame" x="14" y="15" width="44" height="56"/>
                                                         <constraints>
                                                             <constraint firstAttribute="height" constant="56" id="imp-image-height"/>
@@ -391,7 +410,7 @@
                                                                 <rect key="frame" x="0.0" y="0.0" width="267" height="20.333333333333332"/>
                                                                 <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
                                                             </label>
-                                                            <label opaque="NO" userInteractionEnabled="NO" tag="106" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="PDF document" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-detail" userLabel="File Detail Label">
+                                                            <label opaque="NO" userInteractionEnabled="NO" tag="106" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Document" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="imp-file-detail" userLabel="File Detail Label">
                                                                 <rect key="frame" x="0.0" y="25.333333333333329" width="267" height="14"/>
                                                                 <fontDescription key="fontDescription" style="UICTFontTextStyleSubheadline"/>
                                                                 <color key="textColor" systemColor="secondaryLabelColor"/>
@@ -566,7 +585,7 @@ The original PDF stays in its source location.</string>
                             </label>
                         </barButtonItem>
                     </toolbarItems>
-                    <navigationItem key="navigationItem" title="Import PDF" id="imp-navigation-item">
+                    <navigationItem key="navigationItem" title="Import File" id="imp-navigation-item">
                         <barButtonItem key="leftBarButtonItem" title="Cancel" id="imp-cancel-item" userLabel="Cancel Import Button">
                             <connections>
                                 <action selector="cancelImport:" destination="imp-view-controller" id="imp-cancel-action"/>
@@ -581,6 +600,13 @@ The original PDF stays in its source location.</string>
                     <connections>
                         <outlet property="directoryTableView" destination="imp-folder-table" id="imp-directory-table-outlet"/>
                         <outlet property="fileNameLabel" destination="imp-file-name" id="imp-file-name-outlet"/>
+                        <outlet property="fileImageView" destination="imp-file-image" id="imp-file-image-outlet"/>
+                        <outlet property="fileDetailLabel" destination="imp-file-detail" id="imp-file-detail-outlet"/>
+                        <outlet property="destinationNameLabel" destination="imp-folder-name" id="imp-destination-name-outlet"/>
+                        <outlet property="destinationPathLabel" destination="imp-destination-path" id="imp-destination-path-outlet"/>
+                        <outlet property="defaultBadgeLabel" destination="imp-default-badge" id="imp-default-badge-outlet"/>
+                        <outlet property="toolbarDestinationLabel" destination="imp-toolbar-destination" id="imp-toolbar-destination-outlet"/>
+                        <outlet property="backButton" destination="imp-back-button" id="imp-back-button-outlet"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="imp-view-responder" sceneMemberID="firstResponder"/>

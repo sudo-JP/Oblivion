@@ -50,14 +50,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func presentPendingImport() {
         guard let url = pendingImportURL else { return }
         guard window?.windowScene?.activationState == .foregroundActive else { return }
-        guard url.isFileURL, url.pathExtension.lowercased() == "pdf" else {
-            print("Cannot import this file: only PDF files are currently supported.")
-            pendingImportURL = nil
+        guard let navigation = window?.rootViewController as? UINavigationController,
+              let browser = navigation.viewControllers.first as? FileBrowser else {
+            print("Cannot present import: the file browser is unavailable.")
             return
         }
-        guard let navigation = window?.rootViewController as? UINavigationController,
-              let browser = navigation.viewControllers.first as? ViewController else {
-            print("Cannot present import: the file browser is unavailable.")
+        guard browser.viewIfLoaded?.window != nil,
+              browser.presentedViewController == nil,
+              navigation.presentedViewController == nil else { return }
+        guard Viewer.supportsFile(at: url) else {
+            pendingImportURL = nil
+            browser.displayError(message: "This file type is not supported. Choose a PDF or a supported image.")
             return
         }
         if browser.showImport(for: url) {
