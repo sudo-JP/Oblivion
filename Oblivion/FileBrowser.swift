@@ -347,7 +347,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             return
         }
         let alert = UIAlertController(title: "New Directory", message: "Enter a directory name.", preferredStyle: .alert)
-        alert.addTextField { $0.placeholder = "Directory name" }
+        alert.addTextField { $0.configureForDirectoryName() }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
             alert?.dismiss(animated: true) { self?.presentPendingImport() }
         })
@@ -618,5 +618,13 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             }
         })
         presenter.present(alert, animated: true)
+    }
+}
+
+extension UITextField {
+    func configureForDirectoryName() {
+        placeholder = "Directory name"
+        autocorrectionType = .no
+        spellCheckingType = .no
     }
 }

@@ -59,9 +59,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             message: "Enter a directory name.",
             preferredStyle: .alert
         )
-        alert.addTextField { textField in
-            textField.placeholder = "Directory name"
-        }
+        alert.addTextField { $0.configureForDirectoryName() }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
             guard let self, let alert else { return }
