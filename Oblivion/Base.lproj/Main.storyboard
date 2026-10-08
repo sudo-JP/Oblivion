@@ -13,12 +13,12 @@
         <scene sceneID="lib-nav-scene">
             <objects>
                 <navigationController storyboardIdentifier="FileBrowserNavigationController" id="lib-nav-controller" userLabel="File Browser Navigation Controller" sceneMemberID="viewController">
-                    <navigationBar key="navigationBar" contentMode="scaleToFill" largeTitles="YES" id="lib-navigation-bar">
-                        <rect key="frame" x="0.0" y="118" width="393" height="106"/>
+                    <navigationBar key="navigationBar" contentMode="scaleToFill" id="lib-navigation-bar">
+                        <rect key="frame" x="0.0" y="59" width="393" height="54"/>
                         <autoresizingMask key="autoresizingMask"/>
                     </navigationBar>
                     <connections>
-                        <segue destination="BYZ-38-t0r" kind="relationship" relationship="rootViewController" id="lib-root-segue"/>
+                        <segue destination="lVk-ze-M7x" kind="relationship" relationship="rootViewController" id="lib-root-segue"/>
                     </connections>
                 </navigationController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="lib-nav-responder" sceneMemberID="firstResponder"/>
@@ -26,115 +26,173 @@
             <point key="canvasLocation" x="-750" y="0.0"/>
         </scene>
         <!--File Browser-->
-        <scene sceneID="tne-QT-ifu">
+        <scene sceneID="2f3-RF-m2O">
             <objects>
-                <viewController storyboardIdentifier="FileBrowser" id="BYZ-38-t0r" userLabel="File Browser" customClass="ViewController" customModule="Oblivion" customModuleProvider="target" sceneMemberID="viewController">
-                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                <viewController storyboardIdentifier="FileBrowser" id="lVk-ze-M7x" userLabel="File Browser" customClass="FileBrowser" customModule="Oblivion" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="2Qi-Wj-Xle">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
-                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="12" translatesAutoresizingMaskIntoConstraints="NO" id="lib-content-stack" userLabel="File Browser Content">
-                                <rect key="frame" x="20" y="236" width="353" height="536"/>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="q5E-xf-yjz" userLabel="Breadcrumb Bar">
+                                <rect key="frame" x="0.0" y="113" width="393" height="48"/>
                                 <subviews>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="On This Device › Oblivion" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="lib-path-label" userLabel="Current Folder Path">
-                                        <rect key="frame" x="0.0" y="0.0" width="353" height="0.0"/>
-                                        <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
-                                        <color key="textColor" systemColor="secondaryLabelColor"/>
-                                    </label>
-                                    <searchBar contentMode="redraw" searchBarStyle="minimal" placeholder="Search" translatesAutoresizingMaskIntoConstraints="NO" id="lib-search-bar" userLabel="File Search">
-                                        <rect key="frame" x="0.0" y="12" width="353" height="44"/>
-                                        <constraints>
-                                            <constraint firstAttribute="height" constant="44" id="lib-search-height"/>
-                                        </constraints>
-                                        <textInputTraits key="textInputTraits"/>
-                                    </searchBar>
-                                    <tableView clipsSubviews="YES" contentMode="scaleToFill" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="64" estimatedRowHeight="64" sectionHeaderHeight="22" sectionFooterHeight="22" translatesAutoresizingMaskIntoConstraints="NO" id="lib-file-table" userLabel="File Tree">
-                                        <rect key="frame" x="0.0" y="68" width="353" height="456"/>
+                                    <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="K3J-Th-69N" userLabel="Breadcrumb Collection View">
+                                        <rect key="frame" x="0.0" y="0.0" width="393" height="48"/>
                                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                                        <inset key="separatorInset" minX="57" minY="0.0" maxX="0.0" maxY="0.0"/>
-                                        <prototypes>
-                                            <tableViewCell contentMode="scaleToFill" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" reuseIdentifier="LibraryFolderCell" textLabel="lib-folder-title" detailTextLabel="lib-folder-detail" imageView="lib-folder-image" rowHeight="64" style="IBUITableViewCellStyleValue1" id="lib-folder-cell" userLabel="Folder Cell">
-                                                <rect key="frame" x="0.0" y="50" width="353" height="64"/>
-                                                <autoresizingMask key="autoresizingMask"/>
-                                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="lib-folder-cell" id="lib-folder-content">
-                                                    <rect key="frame" x="0.0" y="0.0" width="322.66666666666669" height="64"/>
+                                        <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="FVg-oT-zBE">
+                                            <size key="itemSize" width="100" height="48"/>
+                                            <size key="headerReferenceSize" width="0.0" height="0.0"/>
+                                            <size key="footerReferenceSize" width="0.0" height="0.0"/>
+                                            <inset key="sectionInset" minX="16" minY="0.0" maxX="16" maxY="0.0"/>
+                                        </collectionViewFlowLayout>
+                                        <cells>
+                                            <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="BreadcrumbCell" id="L3G-o2-iwH" userLabel="Breadcrumb Cell">
+                                                <rect key="frame" x="16" y="0.0" width="100" height="48"/>
+                                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                                <collectionViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="W5M-vg-gEh">
+                                                    <rect key="frame" x="0.0" y="0.0" width="100" height="48"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                     <subviews>
-                                                        <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="folder" catalog="system" id="lib-folder-image">
-                                                            <rect key="frame" x="20.5" y="23.333333333333336" width="23" height="17.333333333333332"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                            <color key="tintColor" systemColor="systemBlueColor"/>
-                                                        </imageView>
-                                                        <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Folder" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="lib-folder-title">
-                                                            <rect key="frame" x="58.5" y="22" width="48.333333333333336" height="20.333333333333332"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                            <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Folder" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-name" userLabel="Folder Name">
+                                                            <rect key="frame" x="8" y="15.5" width="64" height="17"/>
+                                                            <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                            <color key="textColor" systemColor="systemBlueColor"/>
                                                         </label>
-                                                        <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Items" textAlignment="right" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="lib-folder-detail">
-                                                            <rect key="frame" x="281.33333333333337" y="26.000000000000004" width="33.333333333333336" height="15.666666666666666"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                            <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
+                                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" text="›" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="browser-crumb-separator" userLabel="Path Separator">
+                                                            <rect key="frame" x="80" y="13" width="12" height="22"/>
+                                                            <fontDescription key="fontDescription" type="system" pointSize="18"/>
                                                             <color key="textColor" systemColor="secondaryLabelColor"/>
+                                                            <constraints>
+                                                                <constraint firstAttribute="width" constant="12" id="browser-crumb-separator-width"/>
+                                                            </constraints>
                                                         </label>
                                                     </subviews>
-                                                </tableViewCellContentView>
-                                            </tableViewCell>
-                                            <tableViewCell contentMode="scaleToFill" selectionStyle="default" indentationWidth="10" reuseIdentifier="LibraryPDFCell" textLabel="lib-pdf-title" detailTextLabel="lib-pdf-detail" imageView="lib-pdf-image" rowHeight="64" style="IBUITableViewCellStyleSubtitle" id="lib-pdf-cell" userLabel="PDF Cell">
-                                                <rect key="frame" x="0.0" y="114" width="353" height="64"/>
-                                                <autoresizingMask key="autoresizingMask"/>
-                                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="lib-pdf-cell" id="lib-pdf-content">
-                                                    <rect key="frame" x="0.0" y="0.0" width="353" height="64"/>
-                                                    <autoresizingMask key="autoresizingMask"/>
-                                                    <subviews>
-                                                        <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" id="lib-pdf-image" userLabel="PDF Thumbnail">
-                                                            <rect key="frame" x="16" y="8" width="36" height="48"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                        </imageView>
-                                                        <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="Document.pdf" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="lib-pdf-title">
-                                                            <rect key="frame" x="56.999999999999993" y="11.999999999999998" width="109.33333333333333" height="20.333333333333332"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                            <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
-                                                        </label>
-                                                        <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" text="PDF document" lineBreakMode="tailTruncation" adjustsFontForContentSizeCategory="YES" id="lib-pdf-detail">
-                                                            <rect key="frame" x="57.000000000000007" y="35.333333333333329" width="83.666666666666671" height="14.333333333333334"/>
-                                                            <autoresizingMask key="autoresizingMask"/>
-                                                            <fontDescription key="fontDescription" style="UICTFontTextStyleCaption1"/>
-                                                            <color key="textColor" systemColor="secondaryLabelColor"/>
-                                                        </label>
-                                                    </subviews>
-                                                </tableViewCellContentView>
-                                            </tableViewCell>
-                                        </prototypes>
-                                    </tableView>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Folders and PDFs will appear here." textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="lib-help-label" userLabel="File Browser Help">
-                                        <rect key="frame" x="0.0" y="536" width="353" height="0.0"/>
-                                        <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
+                                                    <constraints>
+                                                        <constraint firstItem="browser-crumb-name" firstAttribute="leading" secondItem="W5M-vg-gEh" secondAttribute="leading" constant="8" id="browser-crumb-name-leading"/>
+                                                        <constraint firstItem="browser-crumb-name" firstAttribute="centerY" secondItem="W5M-vg-gEh" secondAttribute="centerY" id="browser-crumb-name-center"/>
+                                                        <constraint firstItem="browser-crumb-separator" firstAttribute="leading" secondItem="browser-crumb-name" secondAttribute="trailing" constant="8" id="browser-crumb-separator-leading"/>
+                                                        <constraint firstAttribute="trailing" secondItem="browser-crumb-separator" secondAttribute="trailing" constant="8" id="browser-crumb-separator-trailing"/>
+                                                        <constraint firstItem="browser-crumb-separator" firstAttribute="centerY" secondItem="W5M-vg-gEh" secondAttribute="centerY" id="browser-crumb-separator-center"/>
+                                                    </constraints>
+                                                </collectionViewCellContentView>
+                                            </collectionViewCell>
+                                        </cells>
+                                    </collectionView>
+                                </subviews>
+                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <constraints>
+                                    <constraint firstItem="K3J-Th-69N" firstAttribute="top" secondItem="q5E-xf-yjz" secondAttribute="top" id="2bw-wD-mGv"/>
+                                    <constraint firstAttribute="bottom" secondItem="K3J-Th-69N" secondAttribute="bottom" id="bri-kG-Kyp"/>
+                                    <constraint firstAttribute="trailing" secondItem="K3J-Th-69N" secondAttribute="trailing" id="er1-uW-Jwv"/>
+                                    <constraint firstAttribute="height" constant="48" id="lmU-bq-w0U"/>
+                                    <constraint firstItem="K3J-Th-69N" firstAttribute="leading" secondItem="q5E-xf-yjz" secondAttribute="leading" id="ycB-BR-f5E"/>
+                                </constraints>
+                            </view>
+                            <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="WFF-zG-RIa" userLabel="File Grid">
+                                <rect key="frame" x="0.0" y="161" width="393" height="618"/>
+                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <collectionViewFlowLayout key="collectionViewLayout" minimumLineSpacing="26" minimumInteritemSpacing="18" id="DiG-6A-OTf">
+                                    <size key="itemSize" width="140" height="220"/>
+                                    <size key="headerReferenceSize" width="0.0" height="0.0"/>
+                                    <size key="footerReferenceSize" width="0.0" height="0.0"/>
+                                    <inset key="sectionInset" minX="16" minY="24" maxX="16" maxY="24"/>
+                                </collectionViewFlowLayout>
+                                <cells>
+                                    <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" reuseIdentifier="BrowserItemCell" id="XZa-Ef-jMo" userLabel="File or Folder Cell">
+                                        <rect key="frame" x="16" y="24" width="140" height="220"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                        <collectionViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleAspectFit" insetsLayoutMarginsFromSafeArea="NO" id="UcB-S1-Gf8">
+                                            <rect key="frame" x="0.0" y="0.0" width="140" height="220"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="F5C-9g-pEv" userLabel="Document Preview or Folder Image">
+                                                    <rect key="frame" x="25" y="8" width="90" height="124"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="width" constant="90" id="V3y-D5-wMr"/>
+                                                        <constraint firstAttribute="height" constant="124" id="cdO-A3-Dr4"/>
+                                                    </constraints>
+                                                </imageView>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Document.pdf" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="s3B-Ei-wBD" userLabel="File or Folder Name">
+                                                    <rect key="frame" x="4" y="144" width="132" height="17"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Details" textAlignment="center" lineBreakMode="tailTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="browser-item-detail" userLabel="Page or Item Count">
+                                                    <rect key="frame" x="4" y="166" width="132" height="14.5"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                                    <color key="textColor" systemColor="secondaryLabelColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="F5C-9g-pEv" firstAttribute="centerX" secondItem="UcB-S1-Gf8" secondAttribute="centerX" id="4aB-W8-4zq"/>
+                                                <constraint firstItem="s3B-Ei-wBD" firstAttribute="leading" secondItem="UcB-S1-Gf8" secondAttribute="leading" constant="4" id="TJ2-di-pdM"/>
+                                                <constraint firstAttribute="trailing" secondItem="s3B-Ei-wBD" secondAttribute="trailing" constant="4" id="bI8-NY-bri"/>
+                                                <constraint firstItem="s3B-Ei-wBD" firstAttribute="top" secondItem="F5C-9g-pEv" secondAttribute="bottom" constant="12" id="io7-PU-KI0"/>
+                                                <constraint firstItem="F5C-9g-pEv" firstAttribute="top" secondItem="UcB-S1-Gf8" secondAttribute="top" constant="8" id="vdN-lg-h5t"/>
+                                                <constraint firstItem="browser-item-detail" firstAttribute="leading" secondItem="UcB-S1-Gf8" secondAttribute="leading" constant="4" id="browser-item-detail-leading"/>
+                                                <constraint firstAttribute="trailing" secondItem="browser-item-detail" secondAttribute="trailing" constant="4" id="browser-item-detail-trailing"/>
+                                                <constraint firstItem="browser-item-detail" firstAttribute="top" secondItem="s3B-Ei-wBD" secondAttribute="bottom" constant="5" id="browser-item-detail-top"/>
+                                            </constraints>
+                                        </collectionViewCellContentView>
+                                    </collectionViewCell>
+                                </cells>
+                            </collectionView>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="browser-footer" userLabel="Item Count Footer">
+                                <rect key="frame" x="0.0" y="779" width="393" height="39"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Items" textAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="browser-item-count" userLabel="Total Item Count">
+                                        <rect key="frame" x="180" y="12" width="33" height="15"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="12"/>
                                         <color key="textColor" systemColor="secondaryLabelColor"/>
                                     </label>
                                 </subviews>
-                            </stackView>
+                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <constraints>
+                                    <constraint firstItem="browser-item-count" firstAttribute="centerX" secondItem="browser-footer" secondAttribute="centerX" id="browser-count-center"/>
+                                    <constraint firstItem="browser-item-count" firstAttribute="top" secondItem="browser-footer" secondAttribute="top" constant="12" id="browser-count-top"/>
+                                    <constraint firstAttribute="bottom" secondItem="browser-item-count" secondAttribute="bottom" constant="12" id="browser-count-bottom"/>
+                                </constraints>
+                            </view>
                         </subviews>
-                        <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                        <viewLayoutGuide key="safeArea" id="F4h-3q-k1o"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
-                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="lib-content-stack" secondAttribute="bottom" constant="12" id="lib-content-bottom"/>
-                            <constraint firstItem="lib-content-stack" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="20" id="lib-content-leading"/>
-                            <constraint firstItem="lib-content-stack" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="12" id="lib-content-top"/>
-                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="lib-content-stack" secondAttribute="trailing" constant="20" id="lib-content-trailing"/>
+                            <constraint firstItem="q5E-xf-yjz" firstAttribute="leading" secondItem="F4h-3q-k1o" secondAttribute="leading" id="6Kf-i9-E7W"/>
+                            <constraint firstItem="WFF-zG-RIa" firstAttribute="top" secondItem="q5E-xf-yjz" secondAttribute="bottom" id="6gr-n5-19U"/>
+                            <constraint firstItem="q5E-xf-yjz" firstAttribute="top" secondItem="F4h-3q-k1o" secondAttribute="top" id="H1L-t9-Dwa"/>
+                            <constraint firstItem="F4h-3q-k1o" firstAttribute="trailing" secondItem="q5E-xf-yjz" secondAttribute="trailing" id="iVC-WU-n4Y"/>
+                            <constraint firstItem="F4h-3q-k1o" firstAttribute="trailing" secondItem="WFF-zG-RIa" secondAttribute="trailing" id="nq8-EQ-4kq"/>
+                            <constraint firstItem="browser-footer" firstAttribute="top" secondItem="WFF-zG-RIa" secondAttribute="bottom" id="tnd-0N-zYk"/>
+                            <constraint firstItem="WFF-zG-RIa" firstAttribute="leading" secondItem="F4h-3q-k1o" secondAttribute="leading" id="uRg-DC-s16"/>
+                            <constraint firstItem="browser-footer" firstAttribute="leading" secondItem="F4h-3q-k1o" secondAttribute="leading" id="browser-footer-leading"/>
+                            <constraint firstItem="browser-footer" firstAttribute="trailing" secondItem="F4h-3q-k1o" secondAttribute="trailing" id="browser-footer-trailing"/>
+                            <constraint firstItem="browser-footer" firstAttribute="bottom" secondItem="F4h-3q-k1o" secondAttribute="bottom" id="browser-footer-bottom"/>
                         </constraints>
                     </view>
-                    <navigationItem key="navigationItem" title="Oblivion" largeTitleDisplayMode="always" id="lib-navigation-item">
+                    <navigationItem key="navigationItem" title="Home" largeTitleDisplayMode="never" id="0n2-Mc-90b">
+                        <barButtonItem key="leftBarButtonItem" enabled="NO" image="chevron.left" catalog="system" id="browser-back-button" userLabel="Parent Folder">
+                            <accessibility key="accessibilityConfiguration" label="Back to parent folder"/>
+                            <connections>
+                                <action selector="goToParentDirectory:" destination="lVk-ze-M7x" id="browser-back-action"/>
+                            </connections>
+                        </barButtonItem>
                         <barButtonItem key="rightBarButtonItem" title="Import" id="lib-import-button" userLabel="Show Import Popup">
                             <connections>
-                                <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
+                                <action selector="importFile:" destination="lVk-ze-M7x" id="browser-import-action"/>
                             </connections>
                         </barButtonItem>
                     </navigationItem>
                     <connections>
+                        <outlet property="breadcrumbCollectionView" destination="K3J-Th-69N" id="browser-breadcrumb-outlet"/>
+                        <outlet property="fileCollectionView" destination="WFF-zG-RIa" id="browser-grid-outlet"/>
+                        <outlet property="backButton" destination="browser-back-button" id="browser-back-outlet"/>
+                        <outlet property="itemCountLabel" destination="browser-item-count" id="browser-count-outlet"/>
+                        <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
                         <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="fullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
                     </connections>
                 </viewController>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="vWH-2q-Wzn" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="13" y="0.0"/>
         </scene>
