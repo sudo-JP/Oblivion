@@ -203,15 +203,29 @@
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-delete-trailing-space"/>
                     </toolbarItems>
                     <navigationItem key="navigationItem" title="Home" largeTitleDisplayMode="never" id="0n2-Mc-90b">
-                        <barButtonItem key="leftBarButtonItem" enabled="NO" image="chevron.left" catalog="system" id="browser-back-button" userLabel="Parent Directory">
-                            <accessibility key="accessibilityConfiguration" label="Back to parent directory"/>
-                            <connections>
-                                <action selector="goToParentDirectory:" destination="lVk-ze-M7x" id="browser-back-action"/>
-                            </connections>
-                        </barButtonItem>
+                        <leftBarButtonItems>
+                            <barButtonItem enabled="NO" image="chevron.left" catalog="system" id="browser-back-button" userLabel="Parent Directory">
+                                <accessibility key="accessibilityConfiguration" label="Back to parent directory"/>
+                                <connections>
+                                    <action selector="goToParentDirectory:" destination="lVk-ze-M7x" id="browser-back-action"/>
+                                </connections>
+                            </barButtonItem>
+                            <barButtonItem title="Select All" id="browser-select-all-button" userLabel="Select All">
+                                <connections>
+                                    <action selector="selectAllItems:" destination="lVk-ze-M7x" id="browser-select-all-action"/>
+                                </connections>
+                            </barButtonItem>
+                        </leftBarButtonItems>
                         <rightBarButtonItems>
-                            <barButtonItem image="ellipsis.circle" catalog="system" id="browser-more-button" userLabel="Directory Actions">
-                                <accessibility key="accessibilityConfiguration" label="More directory actions"/>
+                            <barButtonItem enabled="NO" title="New Directory" image="folder.badge.plus" catalog="system" id="browser-new-directory-button" userLabel="New Directory">
+                                <connections>
+                                    <action selector="createDirectory:" destination="lVk-ze-M7x" id="browser-new-directory-action"/>
+                                </connections>
+                            </barButtonItem>
+                            <barButtonItem enabled="NO" title="Select" id="browser-select-button" userLabel="Select">
+                                <connections>
+                                    <action selector="beginSelection:" destination="lVk-ze-M7x" id="browser-select-action"/>
+                                </connections>
                             </barButtonItem>
                             <barButtonItem systemItem="done" id="browser-done-button" userLabel="Finish Selection">
                                 <connections>
@@ -225,7 +239,9 @@
                         <outlet property="fileCollectionView" destination="WFF-zG-RIa" id="browser-grid-outlet"/>
                         <outlet property="backButton" destination="browser-back-button" id="browser-back-outlet"/>
                         <outlet property="itemCountLabel" destination="browser-item-count" id="browser-count-outlet"/>
-                        <outlet property="moreButton" destination="browser-more-button" id="browser-more-outlet"/>
+                        <outlet property="newDirectoryButton" destination="browser-new-directory-button" id="browser-new-directory-outlet"/>
+                        <outlet property="selectButton" destination="browser-select-button" id="browser-select-outlet"/>
+                        <outlet property="selectAllButton" destination="browser-select-all-button" id="browser-select-all-outlet"/>
                         <outlet property="doneButton" destination="browser-done-button" id="browser-done-outlet"/>
                         <outlet property="deleteButton" destination="browser-delete-button" id="browser-delete-outlet"/>
                         <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
@@ -517,7 +533,7 @@
                                                             <rect key="frame" x="0.0" y="0.0" width="322.66666666666669" height="57"/>
                                                             <autoresizingMask key="autoresizingMask"/>
                                                             <subviews>
-                                                                <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="folder.fill" catalog="system" id="imp-cell-image">
+                                                                <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" id="imp-cell-image">
                                                                     <rect key="frame" x="20.5" y="19.666666666666671" width="23" height="17.333333333333332"/>
                                                                     <autoresizingMask key="autoresizingMask"/>
                                                                     <color key="tintColor" systemColor="systemBlueColor"/>
@@ -632,7 +648,7 @@ The original file stays in its source location.</string>
         <image name="chevron.left" catalog="system" width="97" height="128"/>
         <image name="circle" catalog="system" width="128" height="123"/>
         <image name="ellipsis.circle" catalog="system" width="128" height="123"/>
-        <image name="folder.fill" catalog="system" width="128" height="96"/>
+        <image name="folder.badge.plus" catalog="system" width="128" height="91"/>
         <systemColor name="secondaryLabelColor">
             <color red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

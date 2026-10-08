@@ -34,6 +34,10 @@ enum ViewerError: LocalizedError {
                 return "The requested preview size is invalid."
             case .InvalidPageBounds:
                 return "This document page has invalid dimensions."
+            case .CannotOpen:
+                return "The document could not be loaded for rendering."
+            case .Cancelled:
+                return "Document rendering was cancelled."
             }
         }
     }
@@ -43,9 +47,10 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     struct Document {
         let url: URL
         let content: any Viewable
+        let pageCount: Int
     }
 
-    private static let renderersByExtension: [String: (URL) -> (any Viewable)?] = [
+    private static let renderersByExtension: [String: (URL) -> any Viewable] = [
         "pdf": { PDFViewer(url: $0) },
         "jpg": { ImageViewer(url: $0) },
         "jpeg": { ImageViewer(url: $0) },
@@ -60,15 +65,20 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     ]
     // Cancellation crosses actors; keep non-Sendable Quick Look requests on the UI actor.
     private static var thumbnailRequests: [UUID: QLThumbnailGenerator.Request] = [:]
+    private static var directoryIconTask: Task<Result<UIImage, ViewerError>, Never>?
 
     var document: Document?
     var onMove: (() -> Void)?
     var onDelete: (() -> Void)?
+    var firstPagePreview: UIImage?
     private var currentPage = 0
     private var lastPageSize = CGSize.zero
     private var controlsVisible = true
     private var autoHideTimer: Timer?
     private var previousIdleTimerSetting: Bool?
+    private let pageImages = NSCache<NSNumber, UIImage>()
+    private var pageTasks: [Int: Task<Void, Never>] = [:]
+    private var rotationID: UUID?
 
     @IBOutlet weak var pageCollectionView: UICollectionView!
     
@@ -96,15 +106,20 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         present(alert, animated: true)
     }
 
-    static func loadDocument(at url: URL) -> Result<Document, ViewerError> {
+    static func loadDocument(at url: URL) async -> Result<Document, ViewerError> {
         guard url.isFileURL else { return .failure(.cannotOpen(url)) }
         let fileExtension = url.pathExtension.lowercased()
         guard let renderer = renderersByExtension[fileExtension] else {
             return .failure(.unsupportedExtension(fileExtension))
         }
-        guard let content = renderer(url) else { return .failure(.cannotOpen(url)) }
-        guard content.pageCount > 0 else { return .failure(.noPages) }
-        return .success(Document(url: url, content: content))
+        let content = renderer(url)
+        switch await content.open() {
+        case let .success(pageCount):
+            guard pageCount > 0 else { return .failure(.noPages) }
+            return .success(Document(url: url, content: content, pageCount: pageCount))
+        case let .failure(error):
+            return .failure(error)
+        }
     }
 
     static func supportsFile(at url: URL) -> Bool {
@@ -114,10 +129,29 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
     static func thumbnail(for url: URL, size: CGSize) async -> Result<UIImage, ViewerError> {
         guard url.isFileURL else { return .failure(.cannotOpen(url)) }
         guard supportsFile(at: url) else { return .failure(.unsupportedExtension(url.pathExtension)) }
+        return await generatePreview(for: url, size: size, types: .thumbnail)
+    }
+
+    static func directoryIcon() async -> Result<UIImage, ViewerError> {
+        if let directoryIconTask { return await directoryIconTask.value }
+        guard let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return .failure(.thumbnailGeneration("The Documents directory is unavailable."))
+        }
+        let task = Task {
+            await generatePreview(for: url, size: CGSize(width: 90, height: 90), types: .icon)
+        }
+        directoryIconTask = task
+        return await task.value
+    }
+
+    private static func generatePreview(
+        for url: URL, size: CGSize, types: QLThumbnailGenerator.Request.RepresentationTypes
+    ) async -> Result<UIImage, ViewerError> {
+        guard url.isFileURL else { return .failure(.cannotOpen(url)) }
         guard size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0 else {
             return .failure(.rendering(.InvalidSize))
         }
-        let request = QLThumbnailGenerator.Request(fileAt: url, size: size, scale: UIScreen.main.scale, representationTypes: .thumbnail)
+        let request = QLThumbnailGenerator.Request(fileAt: url, size: size, scale: UIScreen.main.scale, representationTypes: types)
         let identifier = UUID()
         thumbnailRequests[identifier] = request
         defer { thumbnailRequests[identifier] = nil }
@@ -128,7 +162,7 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
             } onCancel: {
                 Task { await cancelThumbnail(identifier) }
             }
-            return .success(preview.uiImage)
+            return .success(preview.uiImage.withRenderingMode(.alwaysOriginal))
         } catch {
             return .failure(.thumbnailGeneration(error.localizedDescription))
         }
@@ -146,6 +180,8 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
             preconditionFailure("ShowViewer must supply a document before loading Viewer.")
         }
         fileNameLabel.text = document.url.lastPathComponent
+        pageImages.countLimit = 3
+        pageImages.totalCostLimit = 32 * 1024 * 1024
         pageCollectionView.contentInsetAdjustmentBehavior = .never
 
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
@@ -197,8 +233,6 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
             preconditionFailure("Viewer requires a flow layout.")
         }
         layout.itemSize = size
-        pageCollectionView.reloadData()
-        pageCollectionView.layoutIfNeeded()
         pageCollectionView.setContentOffset(
             CGPoint(x: CGFloat(currentPage) * size.width, y: 0),
             animated: false
@@ -206,11 +240,44 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         restartAutoHideTimer()
     }
 
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        updateCurrentPage()
+        let identifier = UUID()
+        rotationID = identifier
+        for task in pageTasks.values { task.cancel() }
+        pageTasks.removeAll()
+        for cell in pageCollectionView.visibleCells {
+            guard let zoom = cell.contentView.viewWithTag(302) as? UIScrollView else {
+                preconditionFailure("PageCell requires its zoom scroll view.")
+            }
+            zoom.setZoomScale(zoom.minimumZoomScale, animated: false)
+        }
+        coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+            guard let self, rotationID == identifier else { return }
+            rotationID = nil
+            pageCollectionView.layoutIfNeeded()
+            for cell in pageCollectionView.visibleCells {
+                guard let indexPath = pageCollectionView.indexPath(for: cell),
+                      let image = cell.contentView.viewWithTag(301) as? UIImageView,
+                      let zoom = cell.contentView.viewWithTag(302) as? UIScrollView else {
+                    preconditionFailure("PageCell requires its page image and zoom scroll view.")
+                }
+                zoom.setZoomScale(zoom.minimumZoomScale, animated: false)
+                renderPage(indexPath.item, in: image, size: zoom.bounds.size)
+            }
+        }
+    }
+
+    deinit {
+        for task in pageTasks.values { task.cancel() }
+    }
+
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         guard let document else {
             preconditionFailure("Viewer requires a document.")
         }
-        return document.content.pageCount
+        return document.pageCount
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -225,7 +292,7 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         scrollView.contentInsetAdjustmentBehavior = .never
         scrollView.panGestureRecognizer.isEnabled = false
         scrollView.delegate = self
-        imageView.image = nil
+        imageView.image = indexPath.item == 0 ? firstPagePreview : nil
         let size = CGSize(
             width: collectionView.bounds.width - 24,
             height: collectionView.bounds.height - 24
@@ -238,15 +305,32 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         guard let document else {
             preconditionFailure("Viewer requires a document.")
         }
-        switch document.content.image(forPage: index, size: size) {
-        case let .success(image):
+        if let image = pageImages.object(forKey: NSNumber(value: index)) {
             imageView.image = image
-        case let .failure(error):
-            let message = ViewerError.rendering(error).localizedDescription
-            DispatchQueue.main.async { [weak self] in
-                self?.displayError(message: message)
+            if min(size.width / image.size.width, size.height / image.size.height) <= 1.01 { return }
+        }
+        guard rotationID == nil else { return }
+        pageTasks[index]?.cancel()
+        pageTasks[index] = Task { [weak self, weak imageView] in
+            let result = await document.content.image(forPage: index, size: size)
+            guard !Task.isCancelled, let self else { return }
+            pageTasks[index] = nil
+            guard let imageView,
+                  pageCollectionView.cellForItem(at: IndexPath(item: index, section: 0))?
+                    .contentView.viewWithTag(301) === imageView else { return }
+            switch result {
+            case let .success(image):
+                let cost = (image.cgImage?.bytesPerRow ?? 0) * (image.cgImage?.height ?? 0)
+                pageImages.setObject(image, forKey: NSNumber(value: index), cost: cost)
+                imageView.image = image
+            case let .failure(error):
+                displayError(message: ViewerError.rendering(error).localizedDescription)
             }
         }
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        pageTasks.removeValue(forKey: indexPath.item)?.cancel()
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -421,7 +505,7 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         let width = pageCollectionView.bounds.width
         guard width > 0 else { return }
         let page = Int((pageCollectionView.contentOffset.x / width).rounded())
-        currentPage = min(max(page, 0), document.content.pageCount - 1)
+        currentPage = min(max(page, 0), document.pageCount - 1)
     }
 
     private func displayError(message: String) {

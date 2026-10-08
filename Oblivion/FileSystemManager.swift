@@ -27,7 +27,7 @@ enum FileOperationError: LocalizedError {
     }
 }
 
-enum DirectoryItem {
+nonisolated enum DirectoryItem: Sendable {
     case file(URL)
     case directory(URL)
 
@@ -38,23 +38,28 @@ enum DirectoryItem {
     }
 }
 
-enum FileTransferOperation {
+nonisolated enum FileTransferOperation: Sendable {
     case copy
     case move
 }
 
 extension FileManager {
-    func isDirectory(atPath path: String) -> Bool {
+    nonisolated func isDirectory(atPath path: String) -> Bool {
         var isDir: ObjCBool = false
         return fileExists(atPath: path, isDirectory: &isDir) && isDir.boolValue
     }
 }
 
 
-class FileSystemManager {
+nonisolated class FileSystemManager {
     private let fileManager = FileManager.default
     var documentsDirectory: URL? {
         fileManager.urls(for: .documentDirectory, in: .userDomainMask).first
+    }
+
+    @concurrent
+    static func readDirectory(at url: URL) async -> Result<[DirectoryItem], FileOperationError> {
+        FileSystemManager().listDirectory(at: url)
     }
 
     func isImportInbox(at url: URL) -> Bool {
@@ -68,8 +73,20 @@ class FileSystemManager {
     func isProtectedPath(at url: URL) -> Bool {
         guard url.isFileURL, let documentsDirectory else { return true }
         let root = documentsDirectory.resolvingSymlinksInPath().standardizedFileURL.pathComponents
-        let target = url.resolvingSymlinksInPath().standardizedFileURL.pathComponents
-        return target.count <= root.count || !target.starts(with: root) || isImportInbox(at: url)
+        var ancestor = url.standardizedFileURL
+        var missingComponents: [String] = []
+        // Foundation leaves symlinks unresolved when the destination does not exist yet.
+        while !fileManager.fileExists(atPath: ancestor.path), ancestor.path != "/" {
+            missingComponents.append(ancestor.lastPathComponent)
+            ancestor.deleteLastPathComponent()
+        }
+        var resolved = ancestor.resolvingSymlinksInPath()
+        for component in missingComponents.reversed() {
+            resolved.appendPathComponent(component)
+        }
+        let target = resolved.standardizedFileURL.pathComponents
+        return target.count <= root.count || !target.starts(with: root) ||
+            isImportInbox(at: url) || isImportInbox(at: resolved)
     }
     
     // For deleting files

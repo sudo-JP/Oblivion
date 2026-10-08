@@ -10,10 +10,11 @@ enum RetrieveViewableError: Error {
     case IndexOutOfRange
     case InvalidSize
     case InvalidPageBounds
+    case CannotOpen
+    case Cancelled
 }
 
-protocol Viewable {
-    var pageCount: Int { get }
-    //func thumbnail(size: CGSize) throws -> UIImage
-    func image(forPage index: Int, size: CGSize) -> Result<UIImage, RetrieveViewableError>
+nonisolated protocol Viewable: Sendable {
+    func open() async -> Result<Int, ViewerError>
+    func image(forPage index: Int, size: CGSize) async -> Result<UIImage, RetrieveViewableError>
 }

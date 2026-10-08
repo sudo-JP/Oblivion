@@ -8,20 +8,27 @@ import Foundation
 import PDFKit
 import UIKit
 
-class PDFViewer: Viewable {
-    var pageCount: Int
-    let document: PDFDocument
+actor PDFViewer: Viewable {
+    private let url: URL
+    private var document: PDFDocument?
     
-    init?(url: URL) {
+    init(url: URL) {
+        self.url = url
+    }
+
+    func open() -> Result<Int, ViewerError> {
+        guard !Task.isCancelled else { return .failure(.rendering(.Cancelled)) }
         guard let document = PDFDocument(url: url), !document.isLocked else {
-            return nil
+            return .failure(.cannotOpen(url))
         }
         self.document = document
-        self.pageCount = document.pageCount
+        return .success(document.pageCount)
     }
     
     func image(forPage index: Int, size: CGSize) -> Result<UIImage, RetrieveViewableError> {
-        guard index >= 0, index < pageCount,
+        guard !Task.isCancelled else { return .failure(.Cancelled) }
+        guard let document else { return .failure(.CannotOpen) }
+        guard index >= 0, index < document.pageCount,
               let page = document.page(at: index) else {
             return .failure(.IndexOutOfRange)
         }
@@ -50,7 +57,7 @@ class PDFViewer: Viewable {
             page.draw(with: .mediaBox, to: ctx.cgContext)
         }
         
-        return .success(img)
+        return Task.isCancelled ? .failure(.Cancelled) : .success(img)
     }
     
 }

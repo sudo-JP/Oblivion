@@ -10,6 +10,10 @@ import UniformTypeIdentifiers
 class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate, UIAdaptivePresentationControllerDelegate {
     private let fileSystemManager = FileSystemManager()
     private var thumbnailTask: Task<Void, Never>?
+    private var directoryRequestID = UUID()
+    private var directoryTask: Task<Void, Never>?
+    private var directoryIconTask: Task<Void, Never>?
+    private var directoryIcon: UIImage?
     var sourceURL: URL?
     var initialDirectoryURL: URL?
     var operation: FileTransferOperation = .copy
@@ -34,6 +38,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     @IBOutlet weak var helperLabel: UILabel!
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
+        directoryTask?.cancel()
         dismiss(animated: true) { self.onDismiss?(false) }
     }
     
@@ -67,7 +72,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             }
             switch self.fileSystemManager.createDir(named: directoryName, in: parentURL) {
             case .success:
-                _ = self.refreshDirectory(at: parentURL)
+                Task { _ = await self.refreshDirectory(at: parentURL) }
             case let .failure(error):
                 self.displayError(message: "Could not create the directory: \(error.localizedDescription)")
             }
@@ -77,8 +82,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
 
     @IBAction func goBack(_ sender: UIButton) {
         guard let parentURL = directoryStack.last else { return }
-        if setCurrentDirectory(at: parentURL) {
-            directoryStack.removeLast()
+        directoryTask?.cancel()
+        directoryTask = Task { [weak self] in
+            guard let self else { return }
+            if await setCurrentDirectory(at: parentURL) {
+                directoryStack.removeLast()
+            }
         }
     }
     
@@ -92,6 +101,17 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             : "Choose a different directory.\nThe file will be moved, not copied."
         fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
         updateDestinationLabels()
+        directoryIconTask = Task { [weak self] in
+            let result = await Viewer.directoryIcon()
+            guard !Task.isCancelled, let self else { return }
+            switch result {
+            case let .success(image):
+                directoryIcon = image
+                directoryTableView.reloadData()
+            case let .failure(error):
+                print("Could not load the Directory icon: \(error.localizedDescription)")
+            }
+        }
         guard let sourceURL else { return }
         fileDetailLabel.text = UTType(filenameExtension: sourceURL.pathExtension)?.localizedDescription ?? "Document"
         thumbnailTask = Task { [weak self] in
@@ -113,6 +133,8 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
 
     deinit {
         thumbnailTask?.cancel()
+        directoryTask?.cancel()
+        directoryIconTask?.cancel()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -123,7 +145,9 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             displayError(message: "The Documents directory is unavailable.")
             return
         }
-        _ = setCurrentDirectory(at: currentURL)
+        directoryTask = Task { [weak self] in
+            _ = await self?.setCurrentDirectory(at: currentURL)
+        }
     }
 
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
@@ -142,10 +166,8 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         switch fileContent {
         case let .directory(url):
             content.text = url.lastPathComponent
-            content.image = UIImage(
-                systemName: "folder.fill",
-                withConfiguration: UIImage.SymbolConfiguration(hierarchicalColor: .systemBlue)
-            )
+            content.image = directoryIcon
+            content.imageProperties.maximumSize = CGSize(width: 30, height: 30)
         case let .file(url):
             content.text = url.lastPathComponent
             content.image = UIImage(systemName: "doc.fill")
@@ -160,8 +182,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         switch fileContent {
         case let .directory(url):
             let previousURL = currentDirectoryURL
-            if setCurrentDirectory(at: url), let previousURL {
-                directoryStack.append(previousURL)
+            directoryTask?.cancel()
+            directoryTask = Task { [weak self] in
+                guard let self else { return }
+                if await setCurrentDirectory(at: url), let previousURL {
+                    directoryStack.append(previousURL)
+                }
             }
         case .file:
             break
@@ -198,8 +224,21 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
     }
     
-    func refreshDirectory(at url: URL) -> Bool {
-        let listDirectoryResult = fileSystemManager.listDirectory(at: url)
+    func refreshDirectory(at url: URL) async -> Bool {
+        let identifier = UUID()
+        directoryRequestID = identifier
+        directoryTableView.isUserInteractionEnabled = false
+        confirmButton.isEnabled = false
+        backButton.isEnabled = false
+        defer {
+            if directoryRequestID == identifier {
+                directoryTableView.isUserInteractionEnabled = true
+                updateDestinationLabels()
+            }
+        }
+        let listDirectoryResult = await FileSystemManager.readDirectory(at: url)
+        guard !Task.isCancelled, directoryRequestID == identifier,
+              viewIfLoaded?.window != nil else { return false }
         switch listDirectoryResult {
         case let .success(items):
             currentDirectoryContent = items.filter {
@@ -221,12 +260,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         }
     }
 
-    func setCurrentDirectory(at url: URL?) -> Bool {
+    func setCurrentDirectory(at url: URL?) async -> Bool {
         guard let url else {
             displayError(message: "No directory was provided.")
             return false
         }
-        if !refreshDirectory(at: url) {
+        if !(await refreshDirectory(at: url)) {
             return false
         }
 
