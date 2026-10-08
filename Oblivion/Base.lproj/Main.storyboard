@@ -193,6 +193,12 @@
                         </constraints>
                     </view>
                     <toolbarItems>
+                        <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-rename-leading-space"/>
+                        <barButtonItem enabled="NO" title="Rename" image="pencil" catalog="system" id="browser-rename-button" userLabel="Rename Selected Item">
+                            <connections>
+                                <action selector="renameSelectedItem:" destination="lVk-ze-M7x" id="browser-rename-action"/>
+                            </connections>
+                        </barButtonItem>
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-delete-leading-space"/>
                         <barButtonItem enabled="NO" title="Delete" id="browser-delete-button" userLabel="Delete Selected Items">
                             <color key="tintColor" systemColor="systemRedColor"/>
@@ -244,6 +250,7 @@
                         <outlet property="selectAllButton" destination="browser-select-all-button" id="browser-select-all-outlet"/>
                         <outlet property="doneButton" destination="browser-done-button" id="browser-done-outlet"/>
                         <outlet property="deleteButton" destination="browser-delete-button" id="browser-delete-outlet"/>
+                        <outlet property="renameButton" destination="browser-rename-button" id="browser-rename-outlet"/>
                         <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
                         <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="overFullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
                     </connections>
@@ -429,6 +436,18 @@
                                                             </label>
                                                         </subviews>
                                                     </stackView>
+                                                    <button opaque="NO" tag="107" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="imp-rename-button" userLabel="Rename File">
+                                                        <rect key="frame" x="303" y="21" width="44" height="44"/>
+                                                        <accessibility key="accessibilityConfiguration" label="Rename"/>
+                                                        <constraints>
+                                                            <constraint firstAttribute="width" constant="44" id="imp-rename-width"/>
+                                                            <constraint firstAttribute="height" constant="44" id="imp-rename-height"/>
+                                                        </constraints>
+                                                        <state key="normal" image="pencil" catalog="system"/>
+                                                        <connections>
+                                                            <action selector="renameFile:" destination="imp-view-controller" eventType="touchUpInside" id="imp-rename-action"/>
+                                                        </connections>
+                                                    </button>
                                                 </subviews>
                                                 <color key="backgroundColor" systemColor="secondarySystemGroupedBackgroundColor"/>
                                                 <constraints>
@@ -441,7 +460,9 @@
                                                     <constraint firstItem="imp-file-text-stack" firstAttribute="centerY" secondItem="imp-file-summary" secondAttribute="centerY" id="imp-summary-text-center"/>
                                                     <constraint firstItem="imp-file-text-stack" firstAttribute="leading" secondItem="imp-file-image" secondAttribute="trailing" constant="14" id="imp-summary-text-leading"/>
                                                     <constraint firstItem="imp-file-text-stack" firstAttribute="top" relation="greaterThanOrEqual" secondItem="imp-file-summary" secondAttribute="top" constant="14" id="imp-summary-text-top"/>
-                                                    <constraint firstAttribute="trailing" secondItem="imp-file-text-stack" secondAttribute="trailing" constant="14" id="imp-summary-text-trailing"/>
+                                                    <constraint firstItem="imp-rename-button" firstAttribute="leading" secondItem="imp-file-text-stack" secondAttribute="trailing" constant="8" id="imp-summary-text-trailing"/>
+                                                    <constraint firstAttribute="trailing" secondItem="imp-rename-button" secondAttribute="trailing" constant="6" id="imp-rename-trailing"/>
+                                                    <constraint firstItem="imp-rename-button" firstAttribute="centerY" secondItem="imp-file-summary" secondAttribute="centerY" id="imp-rename-center"/>
                                                 </constraints>
                                                 <userDefinedRuntimeAttributes>
                                                     <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
@@ -622,6 +643,7 @@ The original file stays in its source location.</string>
                         <outlet property="confirmButton" destination="imp-import-item" id="imp-confirm-button-outlet"/>
                         <outlet property="destinationPromptLabel" destination="imp-location-caption" id="imp-prompt-outlet"/>
                         <outlet property="helperLabel" destination="imp-helper-label" id="imp-helper-outlet"/>
+                        <outlet property="renameButton" destination="imp-rename-button" id="imp-rename-outlet"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="imp-view-responder" sceneMemberID="firstResponder"/>
@@ -634,6 +656,7 @@ The original file stays in its source location.</string>
         <image name="circle" catalog="system" width="128" height="123"/>
         <image name="ellipsis.circle" catalog="system" width="128" height="123"/>
         <image name="folder.badge.plus" catalog="system" width="128" height="91"/>
+        <image name="pencil" catalog="system" width="128" height="113"/>
         <systemColor name="secondaryLabelColor">
             <color red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
         </systemColor>

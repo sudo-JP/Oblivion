@@ -14,7 +14,12 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     private var directoryTask: Task<Void, Never>?
     private var directoryIconTask: Task<Void, Never>?
     private var directoryIcon: UIImage?
-    var sourceURL: URL?
+    var sourceURL: URL? {
+        didSet { fileName = sourceURL?.lastPathComponent ?? "" }
+    }
+    var fileName = "" {
+        didSet { fileNameLabel?.text = fileName }
+    }
     var initialDirectoryURL: URL?
     var operation: FileTransferOperation = .copy
     var onDismiss: ((Bool) -> Void)?
@@ -36,6 +41,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     @IBOutlet weak var confirmButton: UIBarButtonItem!
     @IBOutlet weak var destinationPromptLabel: UILabel!
     @IBOutlet weak var helperLabel: UILabel!
+    @IBOutlet weak var renameButton: UIButton!
     
     @IBAction func cancelImport(_ sender: UIBarButtonItem) {
         directoryTask?.cancel()
@@ -51,6 +57,22 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         if handle(url: sourceURL) {
             dismiss(animated: true) { self.onDismiss?(true) }
         }
+    }
+
+    @IBAction func renameFile(_ sender: UIButton) {
+        guard let sourceURL else { return }
+        let alert = UIAlertController(title: "Rename", message: nil, preferredStyle: .alert)
+        alert.addTextField { [fileName] in $0.configureForRename(fileName, selecting: (fileName as NSString).deletingPathExtension) }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self, weak alert] _ in
+            guard let self else { return }
+            guard let name = fileSystemManager.resolvedName(alert?.textFields?.first?.text ?? "", for: sourceURL) else {
+                displayError(message: FileOperationError.invalidName.localizedDescription)
+                return
+            }
+            fileName = name
+        })
+        present(alert, animated: true)
     }
 
     @IBAction func createDir(_ sender: UIBarButtonItem) {
@@ -97,7 +119,8 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         helperLabel.text = operation == .copy
             ? "Choose a directory, or import here.\nThe original file stays in its source location."
             : "Choose a different directory.\nThe file will be moved, not copied."
-        fileNameLabel.text = sourceURL?.lastPathComponent ?? "No file selected"
+        fileNameLabel.text = sourceURL == nil ? "No file selected" : fileName
+        renameButton.isHidden = operation == .move
         updateDestinationLabels()
         directoryIconTask = Task { [weak self] in
             let result = await Viewer.directoryIcon()
@@ -211,7 +234,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             return false
         }
 
-        switch fileSystemManager.transferFile(path: url, dst: destination.appendingPathComponent(url.lastPathComponent), operation: operation) {
+        switch fileSystemManager.transferFile(path: url, dst: destination.appendingPathComponent(fileName), operation: operation) {
         case .success: return true
         case let .failure(.fileAlreadyExists(existingURL)):
             displayError(message: "An item named \(existingURL.lastPathComponent) already exists in this directory.")

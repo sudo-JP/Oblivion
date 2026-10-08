@@ -13,6 +13,7 @@ enum FileOperationError: LocalizedError {
     case failDeleteFile(String)
     case invalidPath(URL)
     case fileAlreadyExists(URL)
+    case invalidName
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum FileOperationError: LocalizedError {
             return "Cannot access or modify \(url.lastPathComponent): the path is unavailable or protected."
         case let .fileAlreadyExists(url):
             return "An item named \(url.lastPathComponent) already exists in this directory."
+        case .invalidName:
+            return "Enter a valid name without slashes."
         }
     }
 }
@@ -150,10 +153,39 @@ nonisolated class FileSystemManager {
         }
     }
     
-    public func createDir(named name: String, in parent: URL) -> Result<Void, FileOperationError> {
+    private func validName(_ name: String) -> String? {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name != ".", name != "..",
-              !name.contains("/"), !name.contains("\0") else {
+        return name.isEmpty || name == "." || name == ".." || name.contains("/") || name.contains("\0") ? nil : name
+    }
+
+    // Files keep their extension: "Etude" or "x.png" for "a.pdf" become "Etude.pdf" and "x.png.pdf".
+    public func resolvedName(_ name: String, for url: URL) -> String? {
+        guard let name = validName(name) else { return nil }
+        let pathExtension = url.pathExtension
+        guard !pathExtension.isEmpty, !fileManager.isDirectory(atPath: url.path),
+              (name as NSString).pathExtension.lowercased() != pathExtension.lowercased() else { return name }
+        return "\(name).\(pathExtension)"
+    }
+
+    public func renameItem(at url: URL, to name: String) -> Result<URL, FileOperationError> {
+        guard let name = resolvedName(name, for: url) else { return .failure(.invalidName) }
+        guard name != url.lastPathComponent else { return .success(url) }
+        let destination = url.deletingLastPathComponent().appendingPathComponent(name)
+        guard !isProtectedPath(at: url) else { return .failure(.invalidPath(url)) }
+        guard !isProtectedPath(at: destination) else { return .failure(.invalidPath(destination)) }
+        guard name.lowercased() == url.lastPathComponent.lowercased() || !fileManager.fileExists(atPath: destination.path) else {
+            return .failure(.fileAlreadyExists(destination))
+        }
+        do {
+            try fileManager.moveItem(at: url, to: destination)
+            return .success(destination)
+        } catch {
+            return .failure(.failMoveFile(error.localizedDescription))
+        }
+    }
+
+    public func createDir(named name: String, in parent: URL) -> Result<Void, FileOperationError> {
+        guard let name = validName(name) else {
             return .failure(.failCreateDirectory("Enter a valid directory name without slashes."))
         }
         let path = parent.appendingPathComponent(name, isDirectory: true)

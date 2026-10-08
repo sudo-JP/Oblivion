@@ -61,6 +61,7 @@ class Viewer: UIViewController, UIGestureRecognizerDelegate {
     private static var directoryIconTask: Task<Result<UIImage, ViewerError>, Never>?
 
     var document: Document?
+    var onRename: (() -> Void)?
     var onMove: (() -> Void)?
     var onDelete: (() -> Void)?
     private var lastContentSize = CGSize.zero
@@ -81,11 +82,14 @@ class Viewer: UIViewController, UIGestureRecognizerDelegate {
     @IBOutlet weak var fileNameLabel: UILabel!
     
     @IBAction func showDocumentActions(_ sender: UIButton) {
-        guard let onMove, let onDelete else {
-            preconditionFailure("FileBrowser must supply the reader's Move and Delete actions.")
+        guard let onRename, let onMove, let onDelete else {
+            preconditionFailure("FileBrowser must supply the reader's Rename, Move and Delete actions.")
         }
         autoHideTimer?.invalidate()
         let alert = UIAlertController(title: document?.url.lastPathComponent, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak alert] _ in
+            alert?.dismiss(animated: true, completion: onRename)
+        })
         alert.addAction(UIAlertAction(title: "Move", style: .default) { [weak alert] _ in
             alert?.dismiss(animated: true, completion: onMove)
         })
@@ -98,6 +102,12 @@ class Viewer: UIViewController, UIGestureRecognizerDelegate {
         alert.popoverPresentationController?.sourceView = sender
         alert.popoverPresentationController?.sourceRect = sender.bounds
         present(alert, animated: true)
+    }
+
+    func rename(to url: URL) {
+        guard let content = document?.content else { return }
+        document = Document(url: url, content: content)
+        fileNameLabel.text = url.lastPathComponent
     }
 
     static func loadDocument(at url: URL) async -> Result<Document, ViewerError> {

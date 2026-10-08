@@ -17,6 +17,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
     @IBOutlet var selectButton: UIBarButtonItem!
     @IBOutlet var doneButton: UIBarButtonItem!
     @IBOutlet weak var deleteButton: UIBarButtonItem!
+    @IBOutlet weak var renameButton: UIBarButtonItem!
 
     @IBAction func goToParentDirectory(_ sender: UIBarButtonItem) {
         guard let previousURL = directoryStack.last else { return }
@@ -52,6 +53,45 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
                 self?.setSelectionMode(false)
                 self?.presentPendingImport()
             }
+        }
+    }
+
+    @IBAction func renameSelectedItem(_ sender: UIBarButtonItem) {
+        guard selectedURLs.count == 1, let url = selectedURLs.first else { return }
+        presentRename(of: url, from: self) { [weak self] renamedURL in
+            if renamedURL != nil { self?.setSelectionMode(false) }
+        }
+    }
+
+    private func presentRename(of url: URL, from presenter: UIViewController, completion: @escaping (URL?) -> Void) {
+        let name = url.lastPathComponent
+        let baseName = FileManager.default.isDirectory(atPath: url.path) ? name : url.deletingPathExtension().lastPathComponent
+        let alert = UIAlertController(title: "Rename", message: nil, preferredStyle: .alert)
+        alert.addTextField { $0.configureForRename(name, selecting: baseName) }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
+            alert?.dismiss(animated: true) {
+                completion(nil)
+                self?.presentPendingImport()
+            }
+        })
+        alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self, weak alert] _ in
+            let newName = alert?.textFields?.first?.text ?? ""
+            alert?.dismiss(animated: true) { self?.rename(url, to: newName, from: presenter, completion: completion) }
+        })
+        presenter.present(alert, animated: true)
+    }
+
+    func rename(_ url: URL, to name: String, from presenter: UIViewController, completion: @escaping (URL?) -> Void) {
+        switch fileSystemManager.renameItem(at: url, to: name) {
+        case let .success(renamedURL):
+            Task {
+                if let currentDirectoryURL { _ = await refreshDirectory(at: currentDirectoryURL, errorPresenter: presenter) }
+                completion(renamedURL)
+                presentPendingImport()
+            }
+        case let .failure(error):
+            displayError(message: "Could not rename \(url.lastPathComponent): \(error.localizedDescription)", in: presenter)
+            completion(nil)
         }
     }
 
@@ -307,6 +347,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
 
     private func updateSelection() {
         deleteButton.isEnabled = !selectedURLs.isEmpty
+        renameButton.isEnabled = selectedURLs.count == 1
         deleteButton.title = selectedURLs.isEmpty ? "Delete" : "Delete (\(selectedURLs.count))"
         if selecting {
             title = "\(selectedURLs.count) Selected"
@@ -420,13 +461,20 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         viewer.document = document
         for task in thumbnailTasks.values { task.cancel() }
         thumbnailTasks.removeAll()
+        viewer.onRename = { [weak self, weak viewer] in
+            guard let self, let viewer, let url = viewer.document?.url else { return }
+            self.presentRename(of: url, from: viewer) { [weak viewer] renamedURL in
+                if let renamedURL { viewer?.rename(to: renamedURL) }
+                viewer?.restartAutoHideTimer()
+            }
+        }
         viewer.onMove = { [weak self, weak viewer] in
-            guard let self, let viewer else { return }
-            self.presentMove(for: document.url, from: viewer)
+            guard let self, let viewer, let url = viewer.document?.url else { return }
+            self.presentMove(for: url, from: viewer)
         }
         viewer.onDelete = { [weak self, weak viewer] in
-            guard let self, let viewer else { return }
-            self.confirmDeletion(of: [document.url], from: viewer) { [weak self, weak viewer] succeeded in
+            guard let self, let viewer, let url = viewer.document?.url else { return }
+            self.confirmDeletion(of: [url], from: viewer) { [weak self, weak viewer] succeeded in
                 guard let viewer else { return }
                 if succeeded {
                     self?.closeViewer(viewer)
@@ -626,5 +674,17 @@ extension UITextField {
         placeholder = "Directory name"
         autocorrectionType = .no
         spellCheckingType = .no
+    }
+
+    func configureForRename(_ name: String, selecting baseName: String) {
+        text = name
+        autocorrectionType = .no
+        spellCheckingType = .no
+        clearButtonMode = .whileEditing
+        addAction(UIAction { action in
+            guard let field = action.sender as? UITextField,
+                  let end = field.position(from: field.beginningOfDocument, offset: baseName.utf16.count) else { return }
+            field.selectedTextRange = field.textRange(from: field.beginningOfDocument, to: end)
+        }, for: .editingDidBegin)
     }
 }
