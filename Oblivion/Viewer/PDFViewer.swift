@@ -36,15 +36,14 @@ class PDFViewer: Viewable {
             return .failure(.InvalidPageBounds)
         }
         let scale = min(size.width / pageRect.width, size.height / pageRect.height)
-        let offsetX = (size.width - pageRect.width * scale) / 2
-        let offsetY = (size.height - pageRect.height * scale) / 2
+        let fittedSize = CGSize(width: pageRect.width * scale, height: pageRect.height * scale)
         
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let renderer = UIGraphicsImageRenderer(size: fittedSize)
         let img = renderer.image { ctx in
             UIColor.white.set()
-            ctx.fill(CGRect(origin: .zero, size: size))
+            ctx.fill(CGRect(origin: .zero, size: fittedSize))
             
-            ctx.cgContext.translateBy(x: offsetX, y: size.height - offsetY)
+            ctx.cgContext.translateBy(x: 0, y: fittedSize.height)
             ctx.cgContext.scaleBy(x: scale, y: -scale)
             ctx.cgContext.translateBy(x: -pageRect.minX, y: -pageRect.minY)
             

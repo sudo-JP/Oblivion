@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 
 class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegate, UIAdaptivePresentationControllerDelegate {
     private let fileSystemManager = FileSystemManager()
+    private var thumbnailTask: Task<Void, Never>?
     var sourceURL: URL?
     var initialDirectoryURL: URL?
     var operation: FileTransferOperation = .copy
@@ -93,19 +94,25 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         updateDestinationLabels()
         guard let sourceURL else { return }
         fileDetailLabel.text = UTType(filenameExtension: sourceURL.pathExtension)?.localizedDescription ?? "Document"
-        let hasScopedAccess = sourceURL.startAccessingSecurityScopedResource()
-        defer {
-            if hasScopedAccess {
-                sourceURL.stopAccessingSecurityScopedResource()
+        thumbnailTask = Task { [weak self] in
+            let hasScopedAccess = sourceURL.startAccessingSecurityScopedResource()
+            defer {
+                if hasScopedAccess { sourceURL.stopAccessingSecurityScopedResource() }
+            }
+            let result = await Viewer.thumbnail(for: sourceURL, size: CGSize(width: 44, height: 56))
+            guard !Task.isCancelled, let self else { return }
+            switch result {
+            case let .success(image):
+                fileImageView.image = image
+            case let .failure(error):
+                fileDetailLabel.text = "Preview unavailable"
+                print("Could not preview \(sourceURL.lastPathComponent): \(error.localizedDescription)")
             }
         }
-        switch Viewer.thumbnail(for: sourceURL, size: CGSize(width: 44, height: 56)) {
-        case let .success(image):
-            fileImageView.image = image
-        case let .failure(error):
-            fileDetailLabel.text = "Preview unavailable"
-            print("Could not preview \(sourceURL.lastPathComponent): \(error.localizedDescription)")
-        }
+    }
+
+    deinit {
+        thumbnailTask?.cancel()
     }
 
     override func viewDidAppear(_ animated: Bool) {

@@ -26,16 +26,11 @@ class ImageViewer: Viewable {
             width: sourceImage.size.width * scale,
             height: sourceImage.size.height * scale
         )
-        let imageRect = CGRect(
-            x: (size.width - imageSize.width) / 2,
-            y: (size.height - imageSize.height) / 2,
-            width: imageSize.width,
-            height: imageSize.height
-        )
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let imageRect = CGRect(origin: .zero, size: imageSize)
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
         let image = renderer.image { context in
             UIColor.white.setFill()
-            context.fill(CGRect(origin: .zero, size: size))
+            context.fill(imageRect)
             sourceImage.draw(in: imageRect)
         }
         return .success(image)

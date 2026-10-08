@@ -246,7 +246,7 @@
                         <subviews>
                             <collectionView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" pagingEnabled="YES" dataMode="prototypes" translatesAutoresizingMaskIntoConstraints="NO" id="94Q-m3-kDA">
                                 <rect key="frame" x="0.0" y="59" width="393" height="759"/>
-                                <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                                <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <collectionViewFlowLayout key="collectionViewLayout" scrollDirection="horizontal" minimumLineSpacing="0.0" minimumInteritemSpacing="0.0" id="wGw-P0-XHM">
                                     <size key="itemSize" width="128" height="128"/>
                                     <size key="headerReferenceSize" width="0.0" height="0.0"/>
@@ -343,7 +343,7 @@
                             </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="8Bq-bh-2P1"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="94Q-m3-kDA" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="Cyt-0K-QDn"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="FMw-LT-qPe"/>

@@ -5,12 +5,14 @@
 //  Created by Jason Phan on 2026-10-05.
 //
 import UIKit
+import QuickLookThumbnailing
 
 enum ViewerError: LocalizedError {
     case unsupportedExtension(String)
     case cannotOpen(URL)
     case noPages
     case rendering(RetrieveViewableError)
+    case thumbnailGeneration(String)
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +24,8 @@ enum ViewerError: LocalizedError {
             return "Could not open \(url.lastPathComponent)."
         case .noPages:
             return "This document has no readable pages."
+        case let .thumbnailGeneration(message):
+            return "Could not generate a preview: \(message)"
         case let .rendering(error):
             switch error {
             case .IndexOutOfRange:
@@ -35,7 +39,7 @@ enum ViewerError: LocalizedError {
     }
 }
 
-class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDelegate {
     struct Document {
         let url: URL
         let content: any Viewable
@@ -54,6 +58,8 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         "tiff": { ImageViewer(url: $0) },
         "webp": { ImageViewer(url: $0) }
     ]
+    // Cancellation crosses actors; keep non-Sendable Quick Look requests on the UI actor.
+    private static var thumbnailRequests: [UUID: QLThumbnailGenerator.Request] = [:]
 
     var document: Document?
     var onMove: (() -> Void)?
@@ -105,9 +111,32 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         url.isFileURL && renderersByExtension[url.pathExtension.lowercased()] != nil
     }
 
-    static func thumbnail(for url: URL, size: CGSize) -> Result<UIImage, ViewerError> {
-        loadDocument(at: url).flatMap { document in
-            document.content.image(forPage: 0, size: size).mapError { .rendering($0) }
+    static func thumbnail(for url: URL, size: CGSize) async -> Result<UIImage, ViewerError> {
+        guard url.isFileURL else { return .failure(.cannotOpen(url)) }
+        guard supportsFile(at: url) else { return .failure(.unsupportedExtension(url.pathExtension)) }
+        guard size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0 else {
+            return .failure(.rendering(.InvalidSize))
+        }
+        let request = QLThumbnailGenerator.Request(fileAt: url, size: size, scale: UIScreen.main.scale, representationTypes: .thumbnail)
+        let identifier = UUID()
+        thumbnailRequests[identifier] = request
+        defer { thumbnailRequests[identifier] = nil }
+        do {
+            let preview = try await withTaskCancellationHandler {
+                try Task.checkCancellation()
+                return try await QLThumbnailGenerator.shared.generateBestRepresentation(for: request)
+            } onCancel: {
+                Task { await cancelThumbnail(identifier) }
+            }
+            return .success(preview.uiImage)
+        } catch {
+            return .failure(.thumbnailGeneration(error.localizedDescription))
+        }
+    }
+
+    private static func cancelThumbnail(_ identifier: UUID) {
+        if let request = thumbnailRequests[identifier] {
+            QLThumbnailGenerator.shared.cancel(request)
         }
     }
 
@@ -164,7 +193,10 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
         guard size.width > 0, size.height > 0, size != lastPageSize else { return }
         lastPageSize = size
         pageCollectionView.isScrollEnabled = true
-        pageCollectionView.collectionViewLayout.invalidateLayout()
+        guard let layout = pageCollectionView.collectionViewLayout as? UICollectionViewFlowLayout else {
+            preconditionFailure("Viewer requires a flow layout.")
+        }
+        layout.itemSize = size
         pageCollectionView.reloadData()
         pageCollectionView.layoutIfNeeded()
         pageCollectionView.setContentOffset(
@@ -215,14 +247,6 @@ class Viewer: UIViewController, UICollectionViewDataSource, UICollectionViewDele
                 self?.displayError(message: message)
             }
         }
-    }
-
-    func collectionView(
-        _ collectionView: UICollectionView,
-        layout collectionViewLayout: UICollectionViewLayout,
-        sizeForItemAt indexPath: IndexPath
-    ) -> CGSize {
-        collectionView.bounds.size
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {

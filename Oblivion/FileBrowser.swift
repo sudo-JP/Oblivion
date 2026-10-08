@@ -82,6 +82,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
     private var currentDirectoryURL: URL?
     private var viewer: Viewer?
     private let thumbnails = NSCache<NSURL, UIImage>()
+    private var thumbnailTasks: [URL: Task<Void, Never>] = [:]
     private var selecting = false
     private var selectedURLs: Set<URL> = []
     var currentDirectoryContent: [DirectoryItem] = []
@@ -169,18 +170,40 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             if let image = thumbnails.object(forKey: url as NSURL) {
                 imageView.image = image
             } else {
-                switch Viewer.thumbnail(for: url, size: CGSize(width: 90, height: 124)) {
-                case let .success(image):
-                    thumbnails.setObject(image, forKey: url as NSURL)
-                    imageView.image = image
-                case let .failure(error):
-                    detailLabel.text = "Preview unavailable"
-                    print("Could not preview \(url.lastPathComponent): \(error.localizedDescription)")
-                }
+                requestThumbnail(for: url)
             }
         }
         configureSelection(for: cell, at: indexPath)
         return cell
+    }
+
+    private func requestThumbnail(for url: URL) {
+        guard thumbnailTasks[url] == nil else { return }
+        thumbnailTasks[url] = Task { [weak self] in
+            let result = await Viewer.thumbnail(for: url, size: CGSize(width: 90, height: 124))
+            guard !Task.isCancelled, let self else { return }
+            thumbnailTasks[url] = nil
+            if case let .success(image) = result {
+                thumbnails.setObject(image, forKey: url as NSURL)
+            }
+            if case let .failure(error) = result {
+                print("Could not preview \(url.lastPathComponent): \(error.localizedDescription)")
+            }
+            guard let index = currentDirectoryContent.firstIndex(where: { $0.url == url }),
+                  let cell = fileCollectionView.cellForItem(at: IndexPath(item: index, section: 0)) else { return }
+            guard let image = cell.contentView.viewWithTag(101) as? UIImageView,
+                  let detail = cell.contentView.viewWithTag(103) as? UILabel else {
+                preconditionFailure("BrowserItemCell requires image and detail views.")
+            }
+            switch result {
+            case let .success(preview): image.image = preview
+            case .failure: detail.text = "Preview unavailable"
+            }
+        }
+    }
+
+    deinit {
+        for task in thumbnailTasks.values { task.cancel() }
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
@@ -456,6 +479,8 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         switch fileSystemManager.listDirectory(at: url) {
         case let .success(items):
             currentDirectoryContent = items
+            for task in thumbnailTasks.values { task.cancel() }
+            thumbnailTasks.removeAll()
             thumbnails.removeAllObjects()
             selectedURLs.formIntersection(Set(items.map(\.url)))
             reloadFiles()
