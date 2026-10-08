@@ -311,22 +311,49 @@
                                     <constraint firstAttribute="bottom" secondItem="1Iz-4R-uHp" secondAttribute="bottom" constant="6" id="yPV-2o-dg1"/>
                                 </constraints>
                             </view>
+                            <view userInteractionEnabled="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="viewer-page-indicator" userLabel="Page Indicator">
+                                <rect key="frame" x="167" y="780" width="59" height="26"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="1 / 1" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="viewer-page-indicator-label">
+                                        <rect key="frame" x="12" y="5" width="35" height="16"/>
+                                        <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="13"/>
+                                        <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                </subviews>
+                                <color key="backgroundColor" white="0.0" alpha="0.6" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <constraints>
+                                    <constraint firstItem="viewer-page-indicator-label" firstAttribute="leading" secondItem="viewer-page-indicator" secondAttribute="leading" constant="12" id="viewer-indicator-label-leading"/>
+                                    <constraint firstAttribute="trailing" secondItem="viewer-page-indicator-label" secondAttribute="trailing" constant="12" id="viewer-indicator-label-trailing"/>
+                                    <constraint firstItem="viewer-page-indicator-label" firstAttribute="top" secondItem="viewer-page-indicator" secondAttribute="top" constant="5" id="viewer-indicator-label-top"/>
+                                    <constraint firstAttribute="bottom" secondItem="viewer-page-indicator-label" secondAttribute="bottom" constant="5" id="viewer-indicator-label-bottom"/>
+                                </constraints>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="layer.cornerRadius">
+                                        <real key="value" value="13"/>
+                                    </userDefinedRuntimeAttribute>
+                                </userDefinedRuntimeAttributes>
+                            </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="8Bq-bh-2P1"/>
                         <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="94Q-m3-kDA" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="Cyt-0K-QDn"/>
+                            <constraint firstItem="94Q-m3-kDA" firstAttribute="leading" secondItem="rMl-wh-qaW" secondAttribute="leading" id="Cyt-0K-QDn"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="FMw-LT-qPe"/>
-                            <constraint firstItem="8Bq-bh-2P1" firstAttribute="bottom" secondItem="94Q-m3-kDA" secondAttribute="bottom" id="b5B-zG-Zje"/>
-                            <constraint firstItem="94Q-m3-kDA" firstAttribute="top" secondItem="8Bq-bh-2P1" secondAttribute="top" id="edp-2n-iII"/>
-                            <constraint firstItem="94Q-m3-kDA" firstAttribute="trailing" secondItem="8Bq-bh-2P1" secondAttribute="trailing" id="eet-jX-EXX"/>
+                            <constraint firstItem="rMl-wh-qaW" firstAttribute="bottom" secondItem="94Q-m3-kDA" secondAttribute="bottom" id="b5B-zG-Zje"/>
+                            <constraint firstItem="94Q-m3-kDA" firstAttribute="top" secondItem="rMl-wh-qaW" secondAttribute="top" id="edp-2n-iII"/>
+                            <constraint firstItem="94Q-m3-kDA" firstAttribute="trailing" secondItem="rMl-wh-qaW" secondAttribute="trailing" id="eet-jX-EXX"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="top" secondItem="8Bq-bh-2P1" secondAttribute="top" id="tiK-HX-4Qq"/>
                             <constraint firstItem="HrQ-rB-H5g" firstAttribute="leading" secondItem="8Bq-bh-2P1" secondAttribute="leading" id="z4T-A4-v0R"/>
+                            <constraint firstItem="viewer-page-indicator" firstAttribute="centerX" secondItem="8Bq-bh-2P1" secondAttribute="centerX" id="viewer-indicator-center"/>
+                            <constraint firstItem="8Bq-bh-2P1" firstAttribute="bottom" secondItem="viewer-page-indicator" secondAttribute="bottom" constant="12" id="viewer-indicator-bottom"/>
                         </constraints>
                     </view>
                     <connections>
                         <outlet property="fileNameLabel" destination="OiP-gb-ENm" id="Rh8-fQ-Hei"/>
                         <outlet property="contentContainer" destination="94Q-m3-kDA" id="OxN-p3-VI2"/>
+                        <outlet property="pageIndicator" destination="viewer-page-indicator" id="viewer-page-indicator-outlet"/>
+                        <outlet property="pageIndicatorLabel" destination="viewer-page-indicator-label" id="viewer-page-indicator-label-outlet"/>
                         <outlet property="topBarView" destination="HrQ-rB-H5g" id="WFc-rw-OM4"/>
                     </connections>
                 </viewController>

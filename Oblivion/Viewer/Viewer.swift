@@ -69,6 +69,12 @@ class Viewer: UIViewController {
     private var previousIdleTimerSetting: Bool?
 
     @IBOutlet weak var contentContainer: UIView!
+    @IBOutlet weak var pageIndicator: UIView!
+    @IBOutlet weak var pageIndicatorLabel: UILabel!
+
+    override var prefersStatusBarHidden: Bool { !controlsVisible }
+    override var prefersHomeIndicatorAutoHidden: Bool { !controlsVisible }
+    override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation { .fade }
 
     @IBOutlet weak var topBarView: UIView!
     
@@ -173,7 +179,11 @@ class Viewer: UIViewController {
         content.frame = contentContainer.bounds
         content.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         contentContainer.addSubview(content)
-        document.content.onPageChange = { [weak self] _ in self?.restartAutoHideTimer() }
+        showPage(document.content.currentPage)
+        document.content.onPageChange = { [weak self] page in
+            self?.showPage(page)
+            self?.restartAutoHideTimer()
+        }
 
         let singleTap = UITapGestureRecognizer(target: self, action: #selector(toggleControls))
         let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleZoom(_:)))
@@ -229,7 +239,7 @@ class Viewer: UIViewController {
         restartAutoHideTimer()
     }
 
-    @objc private func toggleControls() {
+    @objc func toggleControls() {
         setControlsVisible(!controlsVisible || UIAccessibility.isVoiceOverRunning, animated: true)
     }
 
@@ -242,8 +252,16 @@ class Viewer: UIViewController {
             delay: 0, options: [.beginFromCurrentState, .allowUserInteraction]
         ) {
             self.topBarView.alpha = visible ? 1 : 0
+            self.pageIndicator.alpha = visible ? 1 : 0
+            self.setNeedsStatusBarAppearanceUpdate()
         }
+        setNeedsUpdateOfHomeIndicatorAutoHidden()
         restartAutoHideTimer()
+    }
+
+    private func showPage(_ page: Int) {
+        guard let document else { return }
+        pageIndicatorLabel.text = "\(page + 1) / \(document.content.pageCount)"
     }
 
     func restartAutoHideTimer() {
