@@ -65,6 +65,11 @@ nonisolated class FileSystemManager {
         FileSystemManager().listDirectory(at: url)
     }
 
+    @concurrent
+    static func readItemCount(at url: URL) async -> Int? {
+        try? FileSystemManager().listDirectory(at: url).get().count
+    }
+
     func isImportInbox(at url: URL) -> Bool {
         guard url.isFileURL, let documentsDirectory else { return false }
         let inbox = documentsDirectory.resolvingSymlinksInPath()
@@ -139,6 +144,10 @@ nonisolated class FileSystemManager {
         }
         guard !fileManager.fileExists(atPath: dst.path) else {
             return .failure(.fileAlreadyExists(dst))
+        }
+        guard !dst.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+            .starts(with: path.resolvingSymlinksInPath().standardizedFileURL.pathComponents) else {
+            return .failure(.invalidPath(dst))
         }
         do {
             switch operation {

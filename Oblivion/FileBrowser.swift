@@ -18,6 +18,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
     @IBOutlet var doneButton: UIBarButtonItem!
     @IBOutlet weak var deleteButton: UIBarButtonItem!
     @IBOutlet weak var renameButton: UIBarButtonItem!
+    @IBOutlet weak var moveButton: UIBarButtonItem!
 
     @IBAction func goToParentDirectory(_ sender: UIBarButtonItem) {
         guard let previousURL = directoryStack.last else { return }
@@ -29,123 +30,22 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         }
     }
 
-    @IBAction func beginSelection(_ sender: UIBarButtonItem) {
-        setSelectionMode(true)
-    }
-
-    @IBAction func selectAllItems(_ sender: UIBarButtonItem) {
-        for index in currentDirectoryContent.indices {
-            fileCollectionView.selectItem(at: IndexPath(item: index, section: 0), animated: false, scrollPosition: [])
-        }
-        selectedURLs = Set(currentDirectoryContent.map(\.url))
-        updateSelection()
-    }
-
-    @IBAction func finishSelection(_ sender: UIBarButtonItem) {
-        setSelectionMode(false)
-        presentPendingImport()
-    }
-
-    @IBAction func deleteSelectedItems(_ sender: UIBarButtonItem) {
-        let urls = currentDirectoryContent.map(\.url).filter { selectedURLs.contains($0) }
-        confirmDeletion(of: urls, from: self) { [weak self] succeeded in
-            if succeeded {
-                self?.setSelectionMode(false)
-                self?.presentPendingImport()
-            }
-        }
-    }
-
-    @IBAction func renameSelectedItem(_ sender: UIBarButtonItem) {
-        guard selectedURLs.count == 1, let url = selectedURLs.first else { return }
-        presentRename(of: url, from: self) { [weak self] renamedURL in
-            if renamedURL != nil { self?.setSelectionMode(false) }
-        }
-    }
-
-    private func presentRename(of url: URL, from presenter: UIViewController, completion: @escaping (URL?) -> Void) {
-        let name = url.lastPathComponent
-        let baseName = FileManager.default.isDirectory(atPath: url.path) ? name : url.deletingPathExtension().lastPathComponent
-        let alert = UIAlertController(title: "Rename", message: nil, preferredStyle: .alert)
-        alert.addTextField { $0.configureForRename(name, selecting: baseName) }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
-            alert?.dismiss(animated: true) {
-                completion(nil)
-                self?.presentPendingImport()
-            }
-        })
-        alert.addAction(UIAlertAction(title: "Rename", style: .default) { [weak self, weak alert] _ in
-            let newName = alert?.textFields?.first?.text ?? ""
-            alert?.dismiss(animated: true) { self?.rename(url, to: newName, from: presenter, completion: completion) }
-        })
-        presenter.present(alert, animated: true)
-    }
-
-    func rename(_ url: URL, to name: String, from presenter: UIViewController, completion: @escaping (URL?) -> Void) {
-        switch fileSystemManager.renameItem(at: url, to: name) {
-        case let .success(renamedURL):
-            Task {
-                if let currentDirectoryURL { _ = await refreshDirectory(at: currentDirectoryURL, errorPresenter: presenter) }
-                completion(renamedURL)
-                presentPendingImport()
-            }
-        case let .failure(error):
-            displayError(message: "Could not rename \(url.lastPathComponent): \(error.localizedDescription)", in: presenter)
-            completion(nil)
-        }
-    }
-
-    private func confirmDeletion(of urls: [URL], from presenter: UIViewController, completion: @escaping (Bool) -> Void) {
-        guard !urls.isEmpty else { return }
-        let targets: [(url: URL, identifier: NSObject)]
-        do {
-            targets = try urls.map { url in
-                guard let identifier = try url.resourceValues(forKeys: [.fileResourceIdentifierKey])
-                    .fileResourceIdentifier as? NSObject else {
-                    throw FileOperationError.invalidPath(url)
-                }
-                return (url, identifier)
-            }
-        } catch {
-            displayError(message: "Could not verify the selected items: \(error.localizedDescription)", in: presenter)
-            completion(false)
-            return
-        }
-        let directoryNote = urls.contains { FileManager.default.isDirectory(atPath: $0.path) }
-            ? " Directories and their contents will also be deleted." : ""
-        let alert = UIAlertController(
-            title: "Delete \(urls.count) \(urls.count == 1 ? "Item" : "Items")?",
-            message: "This cannot be undone.\(directoryNote)",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
-            alert?.dismiss(animated: true) {
-                completion(false)
-                self?.presentPendingImport()
-            }
-        })
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self, weak alert] _ in
-            alert?.dismiss(animated: true) {
-                Task { await self?.deleteItems(targets, from: presenter, completion: completion) }
-            }
-        })
-        presenter.present(alert, animated: true)
-    }
-
     @IBAction func unwindToBrowserFromViewer(_ segue: UIStoryboardSegue) {
         viewer = nil
     }
 
-    private let fileSystemManager = FileSystemManager()
-    private var currentDirectoryURL: URL?
-    private var viewer: Viewer?
-    private let thumbnails = NSCache<NSURL, UIImage>()
-    private var thumbnailTasks: [URL: Task<Void, Never>] = [:]
-    private var openingTask: Task<Void, Never>?
+    let fileSystemManager = FileSystemManager()
+    var currentDirectoryURL: URL?
+    var viewer: Viewer?
+    let thumbnails = NSCache<NSURL, UIImage>()
+    var itemCounts: [URL: Int] = [:]
+    private var slideAnimator: UIViewPropertyAnimator?
+    var thumbnailTasks: [URL: Task<Void, Never>] = [:]
+    var openingTask: Task<Void, Never>?
     private var initialDirectoryTask: Task<Void, Never>?
     private var directoryRequestID = UUID()
-    private var selecting = false
-    private var selectedURLs: Set<URL> = []
+    var selecting = false
+    var selectedURLs: Set<URL> = []
     var currentDirectoryContent: [DirectoryItem] = []
     var directoryStack: [URL] = [] {
         didSet {
@@ -154,7 +54,7 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         }
     }
 
-    private var breadcrumbURLs: [URL] {
+    var breadcrumbURLs: [URL] {
         guard let currentDirectoryURL else { return [] }
         return directoryStack + [currentDirectoryURL]
     }
@@ -189,379 +89,17 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         presentPendingImport()
     }
 
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        collectionView === breadcrumbCollectionView ? breadcrumbURLs.count : currentDirectoryContent.count
-    }
-
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        if collectionView === breadcrumbCollectionView {
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BreadcrumbCell", for: indexPath)
-            guard let nameLabel = cell.contentView.viewWithTag(201) as? UILabel,
-                  let separatorLabel = cell.contentView.viewWithTag(202) as? UILabel else {
-                preconditionFailure("BreadcrumbCell requires a name (201) and separator (202).")
-            }
-            let url = breadcrumbURLs[indexPath.item]
-            let isCurrent = indexPath.item == breadcrumbURLs.count - 1
-            nameLabel.text = directoryName(for: url)
-            nameLabel.textColor = isCurrent ? .secondaryLabel : .systemBlue
-            separatorLabel.isHidden = isCurrent
-            cell.isAccessibilityElement = true
-            cell.accessibilityLabel = nameLabel.text
-            cell.accessibilityTraits = isCurrent ? [.staticText, .selected] : .button
-            return cell
-        }
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "BrowserItemCell", for: indexPath)
-        guard let imageView = cell.contentView.viewWithTag(101) as? UIImageView,
-              let nameLabel = cell.contentView.viewWithTag(102) as? UILabel,
-              let detailLabel = cell.contentView.viewWithTag(103) as? UILabel else {
-            preconditionFailure("BrowserItemCell must contain an image (101), name (102), and detail (103).")
-        }
-        imageView.image = nil
-        detailLabel.text = nil
-        switch currentDirectoryContent[indexPath.item] {
-        case let .directory(url):
-            nameLabel.text = url.lastPathComponent
-            detailLabel.text = "Directory"
-            if let image = thumbnails.object(forKey: url as NSURL) {
-                imageView.image = image
-            } else {
-                requestThumbnail(for: url, directory: true)
-            }
-        case let .file(url):
-            nameLabel.text = url.lastPathComponent
-            detailLabel.text = url.pathExtension.isEmpty ? "File" : url.pathExtension.uppercased()
-            if let image = thumbnails.object(forKey: url as NSURL) {
-                imageView.image = image
-            } else {
-                requestThumbnail(for: url)
-            }
-        }
-        configureSelection(for: cell, at: indexPath)
-        return cell
-    }
-
-    private func requestThumbnail(for url: URL, directory: Bool = false) {
-        guard thumbnailTasks[url] == nil else { return }
-        thumbnailTasks[url] = Task { [weak self] in
-            let result = directory
-                ? await Viewer.directoryIcon()
-                : await Viewer.thumbnail(for: url, size: CGSize(width: 90, height: 124))
-            guard !Task.isCancelled, let self else { return }
-            thumbnailTasks[url] = nil
-            if case let .success(image) = result {
-                thumbnails.setObject(image, forKey: url as NSURL)
-            }
-            if case let .failure(error) = result {
-                print("Could not preview \(url.lastPathComponent): \(error.localizedDescription)")
-            }
-            guard let index = currentDirectoryContent.firstIndex(where: { $0.url == url }),
-                  let cell = fileCollectionView.cellForItem(at: IndexPath(item: index, section: 0)) else { return }
-            guard let image = cell.contentView.viewWithTag(101) as? UIImageView,
-                  let detail = cell.contentView.viewWithTag(103) as? UILabel else {
-                preconditionFailure("BrowserItemCell requires image and detail views.")
-            }
-            switch result {
-            case let .success(preview): image.image = preview
-            case .failure: detail.text = directory ? "Icon unavailable" : "Preview unavailable"
-            }
-        }
-    }
-
     deinit {
         for task in thumbnailTasks.values { task.cancel() }
         openingTask?.cancel()
         initialDirectoryTask?.cancel()
     }
 
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        if collectionView === fileCollectionView, selecting {
-            selectedURLs.insert(currentDirectoryContent[indexPath.item].url)
-            updateSelection()
-            return
-        }
-        collectionView.deselectItem(at: indexPath, animated: true)
-        if collectionView === breadcrumbCollectionView {
-            guard indexPath.item < directoryStack.count else { return }
-            let url = breadcrumbURLs[indexPath.item]
-            let previousStack = Array(directoryStack.prefix(indexPath.item))
-            Task { [weak self] in
-                guard let self else { return }
-                if await setCurrentDirectory(at: url) {
-                    directoryStack = previousStack
-                }
-            }
-            return
-        }
-        switch currentDirectoryContent[indexPath.item] {
-        case let .directory(url):
-            let previousURL = currentDirectoryURL
-            Task { [weak self] in
-                guard let self else { return }
-                if await setCurrentDirectory(at: url), let previousURL {
-                    directoryStack.append(previousURL)
-                }
-            }
-        case let .file(url):
-            openingTask?.cancel()
-            openingTask = Task { [weak self] in
-                let result = await Viewer.loadDocument(at: url)
-                guard !Task.isCancelled, let self else { return }
-                openingTask = nil
-                guard viewIfLoaded?.window != nil, presentedViewController == nil,
-                      currentDirectoryContent.contains(where: { $0.url == url }) else { return }
-                switch result {
-                case let .success(document):
-                    performSegue(withIdentifier: "ShowViewer", sender: document)
-                case let .failure(error):
-                    displayError(message: error.localizedDescription)
-                }
-            }
-        }
-    }
-
-    func collectionView(_ collectionView: UICollectionView, didDeselectItemAt indexPath: IndexPath) {
-        guard collectionView === fileCollectionView, selecting else { return }
-        selectedURLs.remove(currentDirectoryContent[indexPath.item].url)
-        updateSelection()
-    }
-
-    func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-        if collectionView === breadcrumbCollectionView { return !selecting }
-        return !selecting || !fileSystemManager.isProtectedPath(at: currentDirectoryContent[indexPath.item].url)
-    }
-
-    private func setSelectionMode(_ selecting: Bool) {
-        self.selecting = selecting
-        selectedURLs.removeAll()
-        for indexPath in fileCollectionView.indexPathsForSelectedItems ?? [] {
-            fileCollectionView.deselectItem(at: indexPath, animated: false)
-        }
-        fileCollectionView.allowsMultipleSelection = selecting
-        breadcrumbCollectionView.isUserInteractionEnabled = !selecting
-        backButton.isEnabled = !selecting && !directoryStack.isEmpty
-        navigationItem.leftBarButtonItems = [selecting ? selectAllButton : backButton]
-        navigationItem.rightBarButtonItems = selecting ? [doneButton] : [newDirectoryButton, selectButton]
-        navigationController?.setToolbarHidden(!selecting, animated: !UIAccessibility.isReduceMotionEnabled)
-        updateSelection()
-    }
-
-    private func updateSelection() {
-        deleteButton.isEnabled = !selectedURLs.isEmpty
-        renameButton.isEnabled = selectedURLs.count == 1
-        deleteButton.title = selectedURLs.isEmpty ? "Delete" : "Delete (\(selectedURLs.count))"
-        if selecting {
-            title = "\(selectedURLs.count) Selected"
-        } else if let currentDirectoryURL {
-            title = directoryName(for: currentDirectoryURL)
-        }
-        for indexPath in fileCollectionView.indexPathsForVisibleItems {
-            if let cell = fileCollectionView.cellForItem(at: indexPath) {
-                configureSelection(for: cell, at: indexPath)
-            }
-        }
-    }
-
-    private func configureSelection(for cell: UICollectionViewCell, at indexPath: IndexPath) {
-        guard let indicator = cell.contentView.viewWithTag(104) as? UIImageView else {
-            preconditionFailure("BrowserItemCell requires a selection indicator with tag 104.")
-        }
-        let item = currentDirectoryContent[indexPath.item]
-        let selected = selectedURLs.contains(item.url)
-        indicator.isHidden = !selecting
-        indicator.image = UIImage(systemName: selected ? "checkmark.circle.fill" : "circle")
-        var background = UIBackgroundConfiguration.clear()
-        background.backgroundColor = selected ? .systemBlue.withAlphaComponent(0.12) : .clear
-        cell.backgroundConfiguration = background
-        cell.isAccessibilityElement = true
-        let kind: String
-        switch item {
-        case .directory: kind = "Directory"
-        case .file: kind = "File"
-        }
-        cell.accessibilityLabel = "\(item.url.lastPathComponent), \(kind)"
-        cell.accessibilityTraits = selected ? [.button, .selected] : .button
-    }
-
-    @IBAction func createDirectory(_ sender: UIBarButtonItem) {
-        guard let parentURL = currentDirectoryURL else {
-            displayError(message: "No current directory is available.")
-            return
-        }
-        let alert = UIAlertController(title: "New Directory", message: "Enter a directory name.", preferredStyle: .alert)
-        alert.addTextField { $0.configureForDirectoryName() }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self, weak alert] _ in
-            alert?.dismiss(animated: true) { self?.presentPendingImport() }
-        })
-        alert.addAction(UIAlertAction(title: "Create", style: .default) { [weak self, weak alert] _ in
-            let name = alert?.textFields?.first?.text ?? ""
-            alert?.dismiss(animated: true) {
-                Task {
-                    guard let self else { return }
-                    switch self.fileSystemManager.createDir(named: name, in: parentURL) {
-                    case .success:
-                        _ = await self.refreshDirectory(at: parentURL)
-                        self.presentPendingImport()
-                    case let .failure(error):
-                        self.displayError(message: error.localizedDescription)
-                    }
-                }
-            }
-        })
-        present(alert, animated: true)
-    }
-
-    private func deleteItems(_ targets: [(url: URL, identifier: NSObject)], from presenter: UIViewController, completion: @escaping (Bool) -> Void) async {
-        guard let currentDirectoryURL else {
-            displayError(message: "No current directory is available.", in: presenter)
-            completion(false)
-            return
-        }
-        var failures: [String] = []
-        for (url, identifier) in targets {
-            switch fileSystemManager.deleteFile(path: url, matching: identifier) {
-            case .success:
-                selectedURLs.remove(url)
-                currentDirectoryContent.removeAll { $0.url == url }
-            case let .failure(error):
-                failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
-            }
-        }
-        if presenter === self || !failures.isEmpty {
-            if !(await refreshDirectory(at: currentDirectoryURL, errorPresenter: presenter)) { reloadFiles() }
-        }
-        if failures.isEmpty {
-            completion(true)
-        } else {
-            displayError(message: failures.joined(separator: "\n"), in: presenter)
-            completion(false)
-        }
-    }
-
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        super.prepare(for: segue, sender: sender)
-        if segue.identifier == "ShowImport" {
-            guard let sourceURL = sender as? URL,
-                  let navigation = segue.destination as? UINavigationController,
-                  let handler = navigation.viewControllers.first as? ImportHandler else {
-                preconditionFailure("ShowImport must receive a file URL and present ImportHandler.")
-            }
-            handler.sourceURL = sourceURL
-            handler.initialDirectoryURL = currentDirectoryURL
-            handler.directoryStack = directoryStack
-            handler.onDismiss = { [weak self] _ in
-                self?.importDidDismiss()
-            }
-            return
-        }
-        guard segue.identifier == "ShowViewer" else { return }
-        guard let document = sender as? Viewer.Document,
-              let viewer = segue.destination as? Viewer else {
-            preconditionFailure("ShowViewer must receive a document and present Viewer.")
-        }
-        viewer.document = document
-        for task in thumbnailTasks.values { task.cancel() }
-        thumbnailTasks.removeAll()
-        viewer.onRename = { [weak self, weak viewer] in
-            guard let self, let viewer, let url = viewer.document?.url else { return }
-            self.presentRename(of: url, from: viewer) { [weak viewer] renamedURL in
-                if let renamedURL { viewer?.rename(to: renamedURL) }
-                viewer?.restartAutoHideTimer()
-            }
-        }
-        viewer.onMove = { [weak self, weak viewer] in
-            guard let self, let viewer, let url = viewer.document?.url else { return }
-            self.presentMove(for: url, from: viewer)
-        }
-        viewer.onDelete = { [weak self, weak viewer] in
-            guard let self, let viewer, let url = viewer.document?.url else { return }
-            self.confirmDeletion(of: [url], from: viewer) { [weak self, weak viewer] succeeded in
-                guard let viewer else { return }
-                if succeeded {
-                    self?.closeViewer(viewer)
-                } else {
-                    viewer.restartAutoHideTimer()
-                }
-            }
-        }
-        self.viewer = viewer
-    }
-
-    private func presentMove(for url: URL, from viewer: Viewer) {
-        guard let navigation = storyboard?.instantiateViewController(withIdentifier: "ImportHandlerNavigationController") as? UINavigationController,
-              let handler = navigation.viewControllers.first as? ImportHandler else {
-            preconditionFailure("Move must use the existing import destination scene.")
-        }
-        handler.operation = .move
-        handler.sourceURL = url
-        handler.initialDirectoryURL = url.deletingLastPathComponent()
-        handler.directoryStack = directoryStack
-        handler.onDismiss = { [weak self, weak viewer] succeeded in
-            guard let viewer else { return }
-            if succeeded {
-                self?.closeViewer(viewer)
-            } else {
-                viewer.restartAutoHideTimer()
-            }
-        }
-        viewer.present(navigation, animated: true)
-    }
-
-    private func closeViewer(_ viewer: Viewer) {
-        viewer.dismiss(animated: true) { [weak self] in
-            self?.viewer = nil
-            self?.importDidDismiss()
-        }
-    }
-
-    func showImport(for url: URL) -> Bool {
-        guard currentDirectoryURL != nil else {
-            print("Cannot show import while the initial directory is loading.")
-            return false
-        }
-        guard viewIfLoaded?.window != nil,
-              presentedViewController == nil,
-              navigationController?.presentedViewController == nil else {
-            print("Cannot show import while the browser is hidden or another popup is open.")
-            return false
-        }
-        guard Viewer.supportsFile(at: url) else {
-            displayError(message: "This file type is not supported. Choose a PDF or a supported image.")
-            return false
-        }
-        if selecting { setSelectionMode(false) }
-        performSegue(withIdentifier: "ShowImport", sender: url)
-        return true
-    }
-
-    private func importDidDismiss() {
-        Task { [weak self] in
-            guard let self else { return }
-            if let currentDirectoryURL {
-                _ = await refreshDirectory(at: currentDirectoryURL)
-            }
-            presentPendingImport()
-        }
-    }
-
-    private func presentPendingImport() {
+    func presentPendingImport() {
         (view.window?.windowScene?.delegate as? SceneDelegate)?.presentPendingImport()
     }
 
-    func collectionView(
-        _ collectionView: UICollectionView,
-        layout collectionViewLayout: UICollectionViewLayout,
-        sizeForItemAt indexPath: IndexPath
-    ) -> CGSize {
-        guard let layout = collectionViewLayout as? UICollectionViewFlowLayout else {
-            preconditionFailure("FileBrowser collections require flow layouts.")
-        }
-        guard collectionView === breadcrumbCollectionView else { return layout.itemSize }
-        let name = directoryName(for: breadcrumbURLs[indexPath.item])
-        let width = (name as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: 14)]).width
-        return CGSize(width: ceil(width) + 36, height: collectionView.bounds.height)
-    }
-
-    private func directoryName(for url: URL) -> String {
+    func directoryName(for url: URL) -> String {
         url == fileSystemManager.documentsDirectory ? "Home" : url.lastPathComponent
     }
 
@@ -599,7 +137,8 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         guard !Task.isCancelled, directoryRequestID == identifier else { return false }
         switch result {
         case let .success(items):
-            applyDirectoryContents(items)
+            let forward = currentDirectoryURL.map { url.pathComponents.count > $0.pathComponents.count }
+            applyDirectoryContents(items, slidingForward: url == currentDirectoryURL ? nil : forward)
             return true
         case let .failure(error):
             displayError(message: "Could not load the directory: \(error.localizedDescription)", in: errorPresenter)
@@ -607,18 +146,19 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
         }
     }
 
-    private func applyDirectoryContents(_ items: [DirectoryItem]) {
+    private func applyDirectoryContents(_ items: [DirectoryItem], slidingForward forward: Bool? = nil) {
         openingTask?.cancel()
         openingTask = nil
         currentDirectoryContent = items
         for task in thumbnailTasks.values { task.cancel() }
         thumbnailTasks.removeAll()
         thumbnails.removeAllObjects()
+        itemCounts.removeAll()
         selectedURLs.formIntersection(Set(items.map(\.url)))
-        reloadFiles()
+        reloadFiles(slidingForward: forward)
     }
 
-    private func reloadFiles() {
+    func reloadFiles(slidingForward forward: Bool? = nil) {
         let changes = {
             self.fileCollectionView.reloadData()
             self.fileCollectionView.layoutIfNeeded()
@@ -629,12 +169,40 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             self.itemCountLabel.text = "\(count) \(count == 1 ? "item" : "items")"
             self.updateSelection()
         }
-        if UIAccessibility.isReduceMotionEnabled {
+        // Files keeps its navigation slide even with Reduce Motion on.
+        if let forward {
+            slide(forward: forward, changes: changes)
+        } else if UIAccessibility.isReduceMotionEnabled {
             changes()
         } else {
             UIView.transition(with: fileCollectionView, duration: 0.2,
                               options: [.transitionCrossDissolve, .allowUserInteraction], animations: changes)
         }
+    }
+
+    // Mirrors a navigation push/pop: the top layer slides a full width, the lower one a third.
+    private func slide(forward: Bool, changes: () -> Void) {
+        slideAnimator?.stopAnimation(false)
+        slideAnimator?.finishAnimation(at: .end)
+        guard let container = fileCollectionView.superview,
+              let snapshot = fileCollectionView.snapshotView(afterScreenUpdates: false) else { return changes() }
+        snapshot.frame = fileCollectionView.frame
+        snapshot.backgroundColor = fileCollectionView.backgroundColor
+        if forward {
+            container.insertSubview(snapshot, belowSubview: fileCollectionView)
+        } else {
+            container.insertSubview(snapshot, aboveSubview: fileCollectionView)
+        }
+        changes()
+        let width = fileCollectionView.bounds.width
+        fileCollectionView.transform = CGAffineTransform(translationX: forward ? width : -width / 3, y: 0)
+        let animator = UIViewPropertyAnimator(duration: 0.4, dampingRatio: 1) {
+            self.fileCollectionView.transform = .identity
+            snapshot.transform = CGAffineTransform(translationX: forward ? -width / 3 : width, y: 0)
+        }
+        animator.addCompletion { _ in snapshot.removeFromSuperview() }
+        slideAnimator = animator
+        animator.startAnimation()
     }
 
     func setCurrentDirectory(at url: URL?) async -> Bool {
@@ -666,25 +234,5 @@ class FileBrowser: UIViewController, UICollectionViewDataSource, UICollectionVie
             }
         })
         presenter.present(alert, animated: true)
-    }
-}
-
-extension UITextField {
-    func configureForDirectoryName() {
-        placeholder = "Directory name"
-        autocorrectionType = .no
-        spellCheckingType = .no
-    }
-
-    func configureForRename(_ name: String, selecting baseName: String) {
-        text = name
-        autocorrectionType = .no
-        spellCheckingType = .no
-        clearButtonMode = .whileEditing
-        addAction(UIAction { action in
-            guard let field = action.sender as? UITextField,
-                  let end = field.position(from: field.beginningOfDocument, offset: baseName.utf16.count) else { return }
-            field.selectedTextRange = field.textRange(from: field.beginningOfDocument, to: end)
-        }, for: .editingDidBegin)
     }
 }

@@ -17,6 +17,9 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     var sourceURL: URL? {
         didSet { fileName = sourceURL?.lastPathComponent ?? "" }
     }
+    private var sourceIsDirectory: Bool {
+        sourceURL.map { FileManager.default.isDirectory(atPath: $0.path) } ?? false
+    }
     var fileName = "" {
         didSet { fileNameLabel?.text = fileName }
     }
@@ -113,12 +116,13 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = operation == .copy ? "Import File" : "Move File"
+        let kind = sourceIsDirectory ? "Directory" : "File"
+        title = operation == .copy ? "Import \(kind)" : "Move \(kind)"
         confirmButton.title = operation == .copy ? "Import" : "Move"
         destinationPromptLabel.text = operation == .copy ? "SAVE A COPY TO" : "MOVE TO"
         helperLabel.text = operation == .copy
             ? "Choose a directory, or import here.\nThe original file stays in its source location."
-            : "Choose a different directory.\nThe file will be moved, not copied."
+            : "Choose a different directory.\nThe \(kind.lowercased()) will be moved, not copied."
         fileNameLabel.text = sourceURL == nil ? "No file selected" : fileName
         renameButton.isHidden = operation == .move
         updateDestinationLabels()
@@ -134,13 +138,15 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
             }
         }
         guard let sourceURL else { return }
-        fileDetailLabel.text = UTType(filenameExtension: sourceURL.pathExtension)?.localizedDescription ?? "Document"
-        thumbnailTask = Task { [weak self] in
+        fileDetailLabel.text = sourceIsDirectory ? "Directory"
+            : UTType(filenameExtension: sourceURL.pathExtension)?.localizedDescription ?? "Document"
+        thumbnailTask = Task { [weak self, sourceIsDirectory] in
             let hasScopedAccess = sourceURL.startAccessingSecurityScopedResource()
             defer {
                 if hasScopedAccess { sourceURL.stopAccessingSecurityScopedResource() }
             }
-            let result = await Viewer.thumbnail(for: sourceURL, size: CGSize(width: 44, height: 56))
+            let result = sourceIsDirectory ? await Viewer.directoryIcon()
+                : await Viewer.thumbnail(for: sourceURL, size: CGSize(width: 44, height: 56))
             guard !Task.isCancelled, let self else { return }
             switch result {
             case let .success(image):
@@ -216,7 +222,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
     }
         
     public func handle(url: URL) -> Bool {
-        guard Viewer.supportsFile(at: url) else {
+        guard sourceIsDirectory || Viewer.supportsFile(at: url) else {
             displayError(message: "This file type is not supported. Choose a PDF or a supported image.")
             return false
         }
@@ -263,7 +269,7 @@ class ImportHandler: UIViewController, UITableViewDataSource, UITableViewDelegat
         switch listDirectoryResult {
         case let .success(items):
             currentDirectoryContent = items.filter {
-                if case .directory = $0 { return true }
+                if case let .directory(directory) = $0 { return directory.standardizedFileURL.path != sourceURL?.standardizedFileURL.path }
                 return false
             }
             if UIAccessibility.isReduceMotionEnabled {

@@ -194,9 +194,15 @@
                     </view>
                     <toolbarItems>
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-rename-leading-space"/>
-                        <barButtonItem enabled="NO" title="Rename" image="pencil" catalog="system" id="browser-rename-button" userLabel="Rename Selected Item">
+                        <barButtonItem enabled="NO" title="Rename" id="browser-rename-button" userLabel="Rename Selected Item">
                             <connections>
                                 <action selector="renameSelectedItem:" destination="lVk-ze-M7x" id="browser-rename-action"/>
+                            </connections>
+                        </barButtonItem>
+                        <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-move-leading-space"/>
+                        <barButtonItem enabled="NO" title="Move" id="browser-move-button" userLabel="Move Selected Item">
+                            <connections>
+                                <action selector="moveSelectedItem:" destination="lVk-ze-M7x" id="browser-move-action"/>
                             </connections>
                         </barButtonItem>
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="browser-delete-leading-space"/>
@@ -251,6 +257,7 @@
                         <outlet property="doneButton" destination="browser-done-button" id="browser-done-outlet"/>
                         <outlet property="deleteButton" destination="browser-delete-button" id="browser-delete-outlet"/>
                         <outlet property="renameButton" destination="browser-rename-button" id="browser-rename-outlet"/>
+                        <outlet property="moveButton" destination="browser-move-button" id="browser-move-outlet"/>
                         <segue destination="imp-nav-controller" kind="presentation" identifier="ShowImport" modalPresentationStyle="formSheet" id="lib-show-import-segue"/>
                         <segue destination="Cy2-8P-3N1" kind="presentation" identifier="ShowViewer" modalPresentationStyle="overFullScreen" modalTransitionStyle="coverVertical" id="u9E-fE-6i0"/>
                     </connections>

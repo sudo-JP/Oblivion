@@ -137,16 +137,62 @@ class Viewer: UIViewController, UIGestureRecognizerDelegate {
     static func directoryIcon() async -> Result<UIImage, ViewerError> {
         if let directoryIconTask { return await directoryIconTask.value }
         let task = Task {
+            // Before iOS 26, Quick Look returns blank or generic page icons for directories on device.
+            guard #available(iOS 26, *) else { return Result<UIImage, ViewerError>.success(drawnDirectoryIcon) }
             do {
                 // Documents is the app's container root, which Quick Look renders as the app icon on device.
                 try FileManager.default.createDirectory(at: directoryIconURL, withIntermediateDirectories: true)
             } catch {
-                return Result<UIImage, ViewerError>.failure(.thumbnailGeneration(error.localizedDescription))
+                print("Could not prepare the Directory icon probe: \(error.localizedDescription)")
+                return Result<UIImage, ViewerError>.success(drawnDirectoryIcon)
             }
-            return await generatePreview(for: directoryIconURL, size: CGSize(width: 90, height: 90), types: .icon)
+            if case let .success(icon) = await generatePreview(for: directoryIconURL, size: CGSize(width: 90, height: 90), types: .icon),
+               hasVisibleContent(icon) {
+                return .success(icon)
+            }
+            return .success(drawnDirectoryIcon)
         }
         directoryIconTask = task
         return await task.value
+    }
+
+    // Replica of the iOS 18 Files Directory icon, measured on its 528-pixel canvas.
+    static let drawnDirectoryIcon = UIGraphicsImageRenderer(size: CGSize(width: 90, height: 90)).image { context in
+        let scale = 90.0 / 528
+        func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * scale, y: y * scale) }
+        let back = UIBezierPath()
+        back.move(to: point(0, 300))
+        back.addLine(to: point(0, 88))
+        back.addQuadCurve(to: point(30, 58), controlPoint: point(0, 58))
+        back.addLine(to: point(140, 58))
+        back.addCurve(to: point(205, 104), controlPoint1: point(166, 58), controlPoint2: point(174, 104))
+        back.addLine(to: point(500, 104))
+        back.addQuadCurve(to: point(528, 132), controlPoint: point(528, 104))
+        back.addLine(to: point(528, 300))
+        back.close()
+        UIColor(red: 0.612, green: 0.882, blue: 0.996, alpha: 1).setFill()
+        back.fill()
+        let front = CGRect(x: 0, y: 137 * scale, width: 90, height: 333 * scale)
+        UIBezierPath(roundedRect: front, cornerRadius: 26 * scale).addClip()
+        let colors = [UIColor(red: 0.482, green: 0.820, blue: 0.969, alpha: 1).cgColor,
+                      UIColor(red: 0.573, green: 0.859, blue: 0.988, alpha: 1).cgColor] as CFArray
+        if let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: colors, locations: [0, 1]) {
+            context.cgContext.drawLinearGradient(gradient, start: CGPoint(x: 0, y: front.minY), end: CGPoint(x: 0, y: front.maxY), options: [])
+        }
+        UIColor(red: 0.63, green: 0.886, blue: 0.988, alpha: 1).setFill()
+        UIRectFill(CGRect(x: 0, y: front.minY, width: 90, height: 1.5 * scale))
+    }
+
+    static func hasVisibleContent(_ image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        var pixels = [UInt8](repeating: 0, count: 8 * 8 * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
+                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: 8, height: 8))
+            return true
+        }
+        return drawn && stride(from: 3, to: pixels.count, by: 4).contains { pixels[$0] > 0 }
     }
 
     private static func generatePreview(
