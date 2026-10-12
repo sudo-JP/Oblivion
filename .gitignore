@@ -86,3 +86,4 @@ dist-ssr
 *.sln
 *.sw?
 target/
+.env

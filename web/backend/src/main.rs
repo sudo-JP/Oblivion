@@ -1,7 +1,21 @@
 use axum::{Router};
+use backend::{routes::routes, state::AppState};
+use std::{net::TcpListener, sync::Arc};
 
 #[tokio::main]
 async fn main() {
-    //let app = Router::new();
-    //axum::serve();
+    dotenvy::dotenv().ok();
+    let state = Arc::new(AppState {
+        token: std::env::var("AUTH_TOKEN").expect("AUTH_TOKEN not set")
+    });
+
+    let app = routes::routes(state);
+    let host = format!("0.0.0.0:{}", env!("PORT"));
+
+    let listener = TcpListener::bind(&host)
+        .await
+        .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", host, e));
+    axum::serve::serve(listener, app)
+        .await
+        .unwrap_or_else(|e| panic!("Server Error: {}", e));
 }
