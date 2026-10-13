@@ -10,7 +10,7 @@ async fn main() {
     });
 
     let app = routes::routes(state);
-    let host = format!("0.0.0.0:{}", env!("PORT"));
+    let host = format!("0.0.0.0:{}", std::env::var("PORT").expect("AUTH_TOKEN not set"));
 
     let listener = TcpListener::bind(&host)
         .await
