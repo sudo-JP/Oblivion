@@ -1,15 +1,17 @@
 use axum::{Router};
 use backend::{routes::routes, state::AppState};
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{Mutex, Notify, mpsc};
 use std::{net::TcpListener, sync::Arc};
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
+
+    let (tx, mut rx) = mpsc::channel(4);
     let state = Arc::new(AppState {
         token: std::env::var("AUTH_TOKEN").expect("AUTH_TOKEN not set"),
-        notify: Notify::new(),
-        pending_files: Mutex::new(None),
+        pending_files: tx,
+        receiver: Mutex::new(rx),
     });
 
     let app = routes::routes(state);

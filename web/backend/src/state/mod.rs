@@ -1,4 +1,5 @@
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::Mutex;
 
 pub enum FileType {
     Pdf(Vec<u8>),
@@ -16,6 +17,6 @@ impl FileType {
 
 pub struct AppState {
     pub token: String,
-    pub pending_files: Mutex<Option<FileType>>,
-    pub notify: Notify,
+    pub pending_files: Sender<FileType>,
+    pub receiver: Mutex<Receiver<FileType>>,
 }
